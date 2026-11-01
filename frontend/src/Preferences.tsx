@@ -52,7 +52,7 @@ export function Preferences({
   return (
     <DialogLayout dialogRef={dialog} titleID="preferences-title" title={t(section)} onClose={onClose} closeDisabled={busy}
       navigation={<DialogNavigation label={t("Preferences categories")} selected={tab} onSelect={(key) => setTab(key as typeof tab)}
-        items={tabs.filter(name => section === "Customize" ? ["Appearance", "Drive cards", "Disconnection"].includes(name) : !["Appearance", "Drive cards", "Disconnection"].includes(name)).map((name) => ({ key: name, label: t(name), id: `${helpID}-${name.replaceAll(" ", "-")}-tab`, panel: `${helpID}-${name.replaceAll(" ", "-")}-panel`, disabled: busy }))} />}
+        items={tabs.filter(name => section === "Customize" ? ["Appearance", "Drive cards", "Disconnection"].includes(name) : !["Appearance", "Drive cards", "Disconnection"].includes(name)).map((name) => ({ key: name, label: t(name === "Configuration" ? "Export/Import" : name), id: `${helpID}-${name.replaceAll(" ", "-")}-tab`, panel: `${helpID}-${name.replaceAll(" ", "-")}-panel`, disabled: busy }))} />}
       footer={<><button type="button" disabled={busy} onClick={onClose}>{t("Cancel")}</button><button form={`${helpID}-form`} className="primary" disabled={busy}>{t("Save")}</button></>}>
         {(busy || !error && (tab === "Cache" && !defaults || tab === "Network" && !proxyReady)) && <LoadingStatus>{t("Operation in progress…")}</LoadingStatus>}
         {error && (

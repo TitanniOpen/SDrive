@@ -1,4 +1,4 @@
-param([switch]$IncludeInstallers)
+param([switch]$IncludeInstallers, [switch]$IncludeOffline)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $version = (Get-Content -LiteralPath "$projectRoot/frontend/package.json" -Raw | ConvertFrom-Json).version
@@ -66,7 +66,8 @@ public static class SDriveResourceCheck {
 '@
 }
 $artifacts = @('SDrive.exe', 'SDrive-check.exe')
-if ($IncludeInstallers) { $artifacts += @("SDrive-$version-setup.exe", "SDrive-$version-offline-setup.exe") }
+if ($IncludeInstallers) { $artifacts += @("SDrive-$version-setup.exe") }
+if ($IncludeOffline) { $artifacts += "SDrive-$version-offline-setup.exe" }
 foreach ($artifact in $artifacts) {
     $path = Join-Path $projectRoot "bin/$artifact"
     $metadata = [Diagnostics.FileVersionInfo]::GetVersionInfo($path)

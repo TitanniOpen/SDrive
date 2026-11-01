@@ -72,3 +72,11 @@ test('rejects corrupt inputs, partial packages and differing shared sources with
   await assert.rejects(prepareReleaseAssets(root, 'windows'), /Missing linux release packages/);
   assert.equal(await readFile(path.join(releases, 'SHA256SUMS'), 'utf8'), original);
 });
+
+test('online-only Windows manifests omit stale offline packages from the release', async t => {
+  const root = await fixture(t, ['windows']);
+  const manifest = path.join(root, 'bin/SHA256SUMS');
+  await writeFile(manifest, (await readFile(manifest, 'utf8')).split('\r\n').filter(line => !line.includes('offline-setup.exe')).join('\r\n'));
+  const releases = await prepareReleaseAssets(root, 'windows');
+  assert.deepEqual((await readdir(releases)).sort(), ['SDrive-1.2.3-setup.exe', 'SDrive-1.2.3-windows-source.zip', 'rclone-source.zip', 'SHA256SUMS'].sort());
+});

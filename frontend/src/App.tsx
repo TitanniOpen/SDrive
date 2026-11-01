@@ -207,21 +207,21 @@ function AppContent({ onLocked }: { onLocked: () => void }) {
       <aside aria-label={t("Main navigation")}>
         <div className="sidebar-heading">
           <div className="brand">
-            <div className="brand-title"><span>SDrive</span><img className="logo" src={appLogo} alt="" /></div>
+            <div className="brand-title"><img className="logo" src={appLogo} alt="" /><span>SDrive</span></div>
             <small>Access All. Share Nothing.</small>
           </div>
           <button className="sidebar-toggle" aria-label={t((narrowNavigation ? navigationOpen : !effectiveCollapsed) ? "Collapse navigation" : "Expand navigation")} aria-expanded={narrowNavigation ? navigationOpen : !effectiveCollapsed} onClick={toggleSidebar}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM9 4v16" /><path d={(narrowNavigation ? navigationOpen : !effectiveCollapsed) ? "m16 9-3 3 3 3" : "m13 9 3 3-3 3"} /></svg>
           </button>
         </div>
-        <div className="nav-active"><span className="nav-icon" aria-hidden="true">▣</span><span className="nav-label">{t("My drives")}</span></div>
-        {(["Customize", "Configuration"] as const).map(section => <button key={section} className="nav" title={t(section)} data-tooltip={t(section)} disabled={!data || !!data.settingsError} onClick={() => setSettings(section)}>
+        <div className={settings || accessSettings || about ? "nav" : "nav-active"}><span className="nav-icon" aria-hidden="true">▣</span><span className="nav-label">{t("My drives")}</span></div>
+        {(["Customize", "Configuration"] as const).map(section => <button key={section} className={`nav${settings === section && !accessSettings && !about ? " nav-active" : ""}`} title={t(section)} data-tooltip={t(section)} disabled={!data || !!data.settingsError} onClick={() => setSettings(section)}>
           <span className="nav-icon" aria-hidden="true">{section === "Customize" ? <svg viewBox="0 0 24 24"><path d="m10 13 9-10a1.4 1.4 0 0 1 2 2l-9 10zM10 13c-3-1-5 1-5 4 0 2-2 3-3 3 5 2 10 0 10-5" /></svg> : "⚙"}</span><span className="nav-label">{t(section)}</span>
         </button>)}
-        <button className="nav" title={t("Application lock")} data-tooltip={t("Application lock")} onClick={() => setAccessSettings(true)}><span className="nav-icon" aria-hidden="true">🔒</span><span className="nav-label">{t("Application lock")}</span></button>
+        <button className={`nav${accessSettings && !about ? " nav-active" : ""}`} title={t("Application lock")} data-tooltip={t("Application lock")} onClick={() => setAccessSettings(true)}><span className="nav-icon" aria-hidden="true">🔒</span><span className="nav-label">{t("Application lock")}</span></button>
         {data?.access?.enabled && <button className="nav" title={t("Lock SDrive")} data-tooltip={t("Lock SDrive")} onClick={() => void run("lock", api.lock)}><span className="nav-icon" aria-hidden="true">▣</span><span className="nav-label">{t("Lock SDrive")}</span></button>}
         <footer>
-          <button className="nav" title={t("About SDrive")} data-tooltip={t("About SDrive")} onClick={() => setAbout(true)}><span className="nav-icon" aria-hidden="true">ⓘ</span><span className="nav-label">{t("About SDrive")}</span></button>
+          <button className={`nav${about ? " nav-active" : ""}`} title={t("About SDrive")} data-tooltip={t("About SDrive")} onClick={() => setAbout(true)}><span className="nav-icon" aria-hidden="true">ⓘ</span><span className="nav-label">{t("About SDrive")}</span></button>
           <button
             className="nav" title={t(data?.settingsError ? "Close SDrive" : "Exit safely")} data-tooltip={t(data?.settingsError ? "Close SDrive" : "Exit safely")}
             disabled={!!working["exit"]}

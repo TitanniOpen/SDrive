@@ -23,6 +23,19 @@ function DetailsHost({ connection }: { connection: ConnectionView }) {
 }
 afterEach(cleanup);
 
+test.each(["Local cache", "Network", "Remote capacity"])("%s keeps its explanation after readings and warnings", topic => {
+  render(<DetailsHost connection={{ ...connected,
+    cache: { ...connected.cache, error: "Cache inspection failed" },
+    capacity: { ...connected.capacity, state: "stale" },
+    network: { state: "stale", partial: true, startedAt: null, checkedAt: "2026-10-27T12:00:03Z", sent: 100, received: 200, filesSent: null, filesReceived: null },
+  }} />);
+  fireEvent.mouseEnter(screen.getByRole("button", { name: topic }));
+  const tooltip = screen.getByRole("tooltip");
+  expect(tooltip.lastElementChild?.className).toBe("detail-disclaimer");
+  expect(tooltip.lastElementChild?.querySelector("em")).not.toBeNull();
+  expect(tooltip.textContent).toContain(topic === "Local cache" ? "Cache inspection failed" : topic === "Network" ? "Outdated sample" : "Capacity update failed");
+});
+
 test("network precedes capacity and hides categories without measured values", () => {
   const network = { state: "active", partial: false, startedAt: "2026-10-27T12:00:00Z", checkedAt: "2026-10-27T12:00:03Z", sent: 2048, received: 4096, filesSent: 1024, filesReceived: 2048 };
   const view = render(<DetailsHost connection={{ ...connected, network }} />);

@@ -23,7 +23,7 @@ export function NetworkDetails({ network, mounted }: { network: NetworkView; mou
         </tr>)}
       </tbody>
     </table>
-    <p>{t("Approximate measurement at different layers; do not add the rows.")}</p>
     {network.checkedAt && <p>{t("Last network sample: {time}", { time: new Date(network.checkedAt).toLocaleTimeString() })}</p>}
+    <p className="detail-disclaimer"><em>{t("Approximate measurement at different layers; do not add the rows.")}</em></p>
   </>;
 }

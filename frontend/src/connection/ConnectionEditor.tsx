@@ -67,6 +67,7 @@ export function ConnectionEditor(props: EditorProps) {
               {p.id === "ftp" && transport === "plain" && <p role="status">{t("This connection uses unencrypted FTP. Confirm permission in Advanced options before continuing.")}</p>}
               {p.id === "sftp" && (
                 <div className="host-key">
+                  <div className="ssh-identity-prompt alert warning">
                   <p id={`${fieldID}-ssh-help`}>
                     {t(
                       "Verify the identity with your administrator before trusting this server.",
@@ -85,6 +86,7 @@ export function ConnectionEditor(props: EditorProps) {
                   >
                     {t("Verify SSH identity")}
                   </button>
+                  </div>
                   {identity && (
                     <>
                       <code>{identity.fingerprint}</code>
@@ -227,7 +229,7 @@ export function ConnectionEditor(props: EditorProps) {
             }}
           >
             <label>
-              {t("Drive name")}
+              {t("Drive name (optional)")}
               <input
                 {...validationProps("name")}
                 value={connection.name}
@@ -236,20 +238,22 @@ export function ConnectionEditor(props: EditorProps) {
               />
             </label>
             {fieldFeedback("name")}
-            <div role="tablist" aria-label={t("Connection setup category")}>
-              {["basic", "advanced"].map((category) => <button key={category} id={`${fieldID}-${category}-tab`} type="button" role="tab" aria-selected={wizard.category === category} aria-controls={`${fieldID}-services`} tabIndex={wizard.category === category ? 0 : -1}
-                onClick={() => wizard.selectCategory(category)}
-                onKeyDown={(e) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? "basic" : e.key === "End" ? "advanced" : category === "basic" ? "advanced" : "basic"; wizard.selectCategory(next); document.getElementById(`${fieldID}-${next}-tab`)?.focus(); } }}>
-                {t(category === "basic" ? "Basic" : "Advanced")}
-              </button>)}
-            </div>
-            <div id={`${fieldID}-services`} role="tabpanel" aria-labelledby={`${fieldID}-${wizard.category}-tab`}>
-              {wizard.category === "advanced" && <p className="alert warning">{t(advancedDisclaimer)}</p>}
-              <label>{t("Connection type")}<select value={methodKey(connection, data.providers)} onChange={(e) => wizard.selectMethod(e.target.value)}>
+            <div className="connection-method-row">
+              <div className="connection-category">
+                <span aria-hidden="true">{t("Basic")}</span>
+                <label className="category-switch">
+                  <input type="checkbox" role="switch" aria-label={t("Advanced")} aria-controls={`${fieldID}-services`}
+                    checked={wizard.category === "advanced"} onChange={(e) => wizard.selectCategory(e.target.checked ? "advanced" : "basic")} />
+                  <span className="switch-track" aria-hidden="true" />
+                  <span>{t("Advanced")}</span>
+                </label>
+              </div>
+              <label>{t("Connection type")}<select id={`${fieldID}-services`} value={methodKey(connection, data.providers)} onChange={(e) => wizard.selectMethod(e.target.value)}>
                 {wizard.serviceMethods.filter((m) => m.advanced === (wizard.category === "advanced")).map((m) => <option key={m.key} value={m.key}>{t(m.label)}{m.provider.experimental ? ` (${t("experimental")})` : ""}</option>)}
               </select></label>
-              {!wizard.serviceMethods.some((m) => m.advanced === (wizard.category === "advanced")) && <p>{t("No connection methods in this category.")}</p>}
             </div>
+            {wizard.category === "advanced" && <p className="alert warning">{t(advancedDisclaimer)}</p>}
+            {!wizard.serviceMethods.some((m) => m.advanced === (wizard.category === "advanced")) && <p>{t("No connection methods in this category.")}</p>}
             {unavailable && <p role="status">{t(p.notice || "")}</p>}
             <MountDestination wizard={wizard} />
           </form>

@@ -17,6 +17,23 @@ import { api, type ConnectionView, type Snapshot } from "./api";
 import bridgeFixtures from "./bridge-fixtures.json";
 import { languages, translate, type Language } from "./i18n";
 
+test.each(["Customize", "Configuration", "Application lock", "About SDrive"])("sidebar selection follows the %s dialog and returns on close", async section => {
+  vi.mocked(api.about).mockResolvedValue(bridgeFixtures.samples.about);
+  render(<App />);
+  const navigation = within(await screen.findByLabelText("Main navigation"));
+  const button = navigation.getByRole("button", { name: section });
+  await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+  expect(navigation.getByText("My drives").closest(".nav-active")).not.toBeNull();
+  fireEvent.click(button);
+  await screen.findByRole("dialog");
+  expect(button.classList.contains("nav-active")).toBe(true);
+  expect(navigation.getByText("My drives").closest(".nav-active")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Close dialog" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(button.classList.contains("nav-active")).toBe(false);
+  expect(navigation.getByText("My drives").closest(".nav-active")).not.toBeNull();
+});
+
 // JSDOM has no modal top layer; native focus and isolation are checked in WebView2.
 Object.defineProperties(HTMLDialogElement.prototype, {
   showModal: { configurable: true, value() { this.setAttribute("open", ""); } },
@@ -26,7 +43,7 @@ Object.defineProperty(window, "matchMedia", { configurable: true, value: vi.fn((
 
 const selectAvailableCategory = () => {
   const select = screen.queryByLabelText("Connection type") || screen.queryByLabelText("Tipo de conexão");
-  if (select instanceof HTMLSelectElement && !select.options.length) fireEvent.click(screen.getByRole("tab", { name: /^(Advanced|Avançados)$/ }));
+  if (select instanceof HTMLSelectElement && !select.options.length) fireEvent.click(screen.getByRole("switch", { name: /^(Advanced|Avançados)$/ }));
 };
 async function selectDriveDetail(topic: string, index = 0) {
   if (!document.querySelectorAll(".drive")[index]) await waitFor(() => expect(document.querySelectorAll(".drive")[index]).toBeDefined());
@@ -276,7 +293,7 @@ test("preference tabs preserve edits, navigate by keyboard and reveal invalid fi
   fireEvent.click(screen.getByRole("tab", { name: "Cache" }));
   fireEvent.change(screen.getByLabelText("Cache target per connection (GiB)"), { target: { value: "0" } });
   fireEvent.keyDown(screen.getByRole("tab", { name: "Cache" }), { key: "End" });
-  expect(screen.getByRole("tabpanel", { name: "Configuration" })).toBeDefined();
+  expect(screen.getByRole("tabpanel", { name: "Export/Import" })).toBeDefined();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   expect(screen.getByRole("tabpanel", { name: "Cache" })).toBeDefined();
   expect(document.activeElement).toBe(screen.getByLabelText("Cache target per connection (GiB)"));
@@ -351,7 +368,7 @@ test("import preview requires conflict resolution and explicit preference select
   vi.mocked(api.commitImport).mockResolvedValue();
   render(<ImportConfigurationDialog preview={{ id: "preview", document }} data={{ ...snapshot, connections: [connection] }} onClose={vi.fn()} onSaved={onSaved} />);
   expect(screen.getByRole("button", { name: "Save imported drafts" }).hasAttribute("disabled")).toBe(true);
-  fireEvent.change(screen.getByLabelText("Drive name"), { target: { value: "Imported Drive" } });
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), { target: { value: "Imported Drive" } });
   fireEvent.change(screen.getByLabelText("Windows drive letter"), { target: { value: "T" } });
   const preferences = screen.getByRole("checkbox", { name: "Apply imported theme, language, cache timing and desktop preferences" });
   expect((preferences as HTMLInputElement).checked).toBe(false);
@@ -368,7 +385,7 @@ test("failed import remains reviewable and cancellation never saves", async () =
   render(<ImportConfigurationDialog preview={{ id: "preview", document }} data={snapshot} onClose={onClose} onSaved={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "Save imported drafts" }));
   await screen.findByText("Disk write failed");
-  expect(screen.getByLabelText("Drive name")).toHaveProperty("value", "Imported");
+  expect(screen.getByLabelText(/^Drive name(?: \(optional\))?$/)).toHaveProperty("value", "Imported");
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(onClose).toHaveBeenCalledOnce();
   expect(api.commitImport).toHaveBeenCalledOnce();
@@ -383,8 +400,8 @@ test("imported drafts preserve the selected method and require the existing auth
   await screen.findByText("Authentication required for imported configuration");
   expect(api.mount).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Authenticate" }));
-  expect(screen.getByRole("tab", { name: "Advanced" }).getAttribute("aria-selected")).toBe("true");
-  expect(screen.getByLabelText("Drive name")).toHaveProperty("value", "Imported Drive");
+  expect(screen.getByRole("switch", { name: "Advanced" })).toHaveProperty("checked", true);
+  expect(screen.getByLabelText(/^Drive name(?: \(optional\))?$/)).toHaveProperty("value", "Imported Drive");
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   fireEvent.click(screen.getByRole("button", { name: "Sign in with Google Drive" }));
   await waitFor(() => expect(api.begin).toHaveBeenCalledWith(expect.objectContaining({ importDraftID: "draft", values: { root_folder_id: "shared-root" }, connection: expect.objectContaining({ id: "", provider: "drive" }) })));
@@ -424,24 +441,25 @@ test("independent desktop failure messages remain localized together", async () 
   await screen.findByText("Não foi possível atualizar os nomes das unidades ou os ícones de serviço do Explorer. Personalizações existentes podem ter prioridade. A unidade conectou, mas não foi possível abrir o Explorer. Use Abrir para tentar novamente.");
 });
 
-test("Basic is initially selected and category tabs support keyboard navigation", async () => {
+test("Basic is initially selected and the category switch filters connection methods", async () => {
   const gcs = { ...snapshot.providers[0], id: "gcs", name: "Google Cloud Storage", backend: "google cloud storage" };
   vi.mocked(api.snapshot).mockResolvedValue({ ...snapshot, providers: [...snapshot.providers, ftpProvider, gcs] });
   render(<App />);
   fireEvent.click(await screen.findByText("Add my first connection"));
-  const basic = screen.getByRole("tab", { name: "Basic" });
-  expect(basic.getAttribute("aria-selected")).toBe("true");
+  const basic = screen.getByRole("switch", { name: "Advanced" });
+  expect(basic).toHaveProperty("checked", false);
   expect(screen.queryByRole("option", { name: "Google Drive" })).toBeNull();
   expect(screen.getByRole("option", { name: "Google Cloud Storage — service account" })).toBeDefined();
-  fireEvent.keyDown(basic, { key: "ArrowRight" });
-  const advanced = screen.getByRole("tab", { name: "Advanced" });
-  expect(advanced.getAttribute("aria-selected")).toBe("true");
+  act(() => basic.focus());
+  fireEvent.click(basic);
+  const advanced = screen.getByRole("switch", { name: "Advanced" });
+  expect(advanced).toHaveProperty("checked", true);
   expect(document.activeElement).toBe(advanced);
   expect(screen.getByText(/These connections require additional setup/)).toBeDefined();
   expect(screen.getByRole("option", { name: "Google Cloud Storage — OAuth" })).toBeDefined();
   expect(screen.queryByRole("option", { name: "FTP / FTPS" })).toBeNull();
-  fireEvent.keyDown(advanced, { key: "Home" });
-  expect(basic.getAttribute("aria-selected")).toBe("true");
+  fireEvent.click(advanced);
+  expect(basic).toHaveProperty("checked", false);
   expect(document.activeElement).toBe(basic);
 });
 
@@ -524,7 +542,7 @@ test("private browser selection reaches authentication without silently falling 
   vi.mocked(api.status).mockResolvedValue({ ...bridgeFixtures.samples.sessionEmpty, id: "private-draft", busy: true });
   render(<App />);
   fireEvent.click(await screen.findByText("Add my first connection"));
-  fireEvent.click(screen.getByRole("tab", { name: "Advanced" }));
+  fireEvent.click(screen.getByRole("switch", { name: "Advanced" }));
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   await screen.findByRole("option", { name: "Microsoft Edge" });
   fireEvent.change(screen.getByLabelText("Sign-in browser"), { target: { value: "edge" } });
@@ -539,7 +557,7 @@ test("new drive accepts eighty emoji code points and blocks eighty-one without t
   render(<App />);
   fireEvent.click(await screen.findByText("Add my first connection"));
   selectAvailableCategory();
-  const input = screen.getByLabelText("Drive name") as HTMLInputElement;
+  const input = screen.getByLabelText(/^Drive name(?: \(optional\))?$/) as HTMLInputElement;
   const tooLong = "😀".repeat(81);
   fireEvent.change(input, { target: { value: tooLong } });
   fireEvent.click(screen.getByText("Continue"));
@@ -559,7 +577,7 @@ test("editing uses the same Unicode limit and preserves an invalid name for corr
   vi.mocked(api.update).mockResolvedValue();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit drive" }));
-  const input = screen.getByLabelText("Drive name") as HTMLInputElement;
+  const input = screen.getByLabelText(/^Drive name(?: \(optional\))?$/) as HTMLInputElement;
   fireEvent.change(input, { target: { value: "é".repeat(81) } });
   fireEvent.click(screen.getByText("Save changes"));
   await screen.findByText("name must contain between 1 and 80 characters");
@@ -843,7 +861,7 @@ test("empty state opens accessible connection form", async () => {
   fireEvent.click(screen.getByText("Add my first connection"));
   selectAvailableCategory();
   expect(screen.getByRole("dialog").getAttribute("aria-modal")).toBe("true");
-  expect(screen.getByLabelText("Drive name")).toBeDefined();
+  expect(screen.getByLabelText(/^Drive name(?: \(optional\))?$/)).toBeDefined();
 });
 test("cancel OAuth cleans up draft", async () => {
   vi.mocked(api.begin).mockResolvedValue("draft");
@@ -858,7 +876,7 @@ test("cancel OAuth cleans up draft", async () => {
   render(<App />);
   fireEvent.click(await screen.findByText("Add my first connection"));
   selectAvailableCategory();
-  fireEvent.change(screen.getByLabelText("Drive name"), {
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), {
     target: { value: "Conta" },
   });
   fireEvent.click(screen.getByText("Continue"));
@@ -878,7 +896,7 @@ test("recovery prevents deleting or changing destination", async () => {
   expect((screen.getByRole("button", { name: "Edit drive" }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "Edit drive" }));
   expect(screen.getByRole("tab", { name: "Access" }).getAttribute("aria-selected")).toBe("true");
-  expect(screen.getByLabelText("Drive name").matches(":disabled")).toBe(true);
+  expect(screen.getByLabelText(/^Drive name(?: \(optional\))?$/).matches(":disabled")).toBe(true);
   expect(
     (screen.getByText("Remove connection") as HTMLButtonElement).disabled,
   ).toBe(true);
@@ -916,7 +934,7 @@ test("provider question accepts MFA and does not persist it in browser storage",
   render(<App />);
   fireEvent.click(await screen.findByText("Add my first connection"));
   selectAvailableCategory();
-  fireEvent.change(screen.getByLabelText("Drive name"), {
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), {
     target: { value: "Conta" },
   });
   fireEvent.click(screen.getByText("Continue"));
@@ -1239,8 +1257,8 @@ test("OAuth setup requires a user-owned application and shows mandatory fields d
   ] }] });
   render(<App />);
   fireEvent.click(await screen.findByText("Add my first connection"));
-  expect(screen.getByRole("tab", { name: "Basic" }).getAttribute("aria-selected")).toBe("true");
-  fireEvent.click(screen.getByRole("tab", { name: "Advanced" }));
+  expect(screen.getByRole("switch", { name: "Advanced" })).toHaveProperty("checked", false);
+  fireEvent.click(screen.getByRole("switch", { name: "Advanced" }));
   expect(screen.getByText(/These connections require additional setup/)).toBeDefined();
   fireEvent.click(screen.getByText("Continue"));
   expect((screen.getByLabelText("Client ID") as HTMLInputElement).required).toBe(true);
@@ -1303,7 +1321,7 @@ test("GCS service-account access is in Basic without OAuth fields", async () => 
   fireEvent.change(screen.getByLabelText("Connection type"), {
     target: { value: "gcs:serviceAccount" },
   });
-  expect(screen.getByRole("tab", { name: "Basic" }).getAttribute("aria-selected")).toBe("true");
+  expect(screen.getByRole("switch", { name: "Advanced" })).toHaveProperty("checked", false);
   expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(screen.getByText("Continue"));
   expect(screen.getByText("Select a service account JSON file authorized for your bucket. Browser sign-in is not required.")).toBeDefined();
@@ -1733,15 +1751,15 @@ test("drive name precedes connection type and survives method and category chang
   const create = await screen.findByRole("button", { name: "+ New connection" });
   await waitFor(() => expect(create).toHaveProperty("disabled", false));
   fireEvent.click(create);
-  const name = screen.getByLabelText("Drive name");
+  const name = screen.getByLabelText(/^Drive name(?: \(optional\))?$/);
   const type = screen.getByLabelText("Connection type");
   expect(name.compareDocumentPosition(type) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   fireEvent.change(name, { target: { value: "My documents" } });
   fireEvent.change(type, { target: { value: "webdav" } });
   expect(name).toHaveProperty("value", "My documents");
-  fireEvent.click(screen.getByRole("tab", { name: "Advanced" }));
+  fireEvent.click(screen.getByRole("switch", { name: "Advanced" }));
   expect(name).toHaveProperty("value", "My documents");
-  fireEvent.click(screen.getByRole("tab", { name: "Basic" }));
+  fireEvent.click(screen.getByRole("switch", { name: "Advanced" }));
   expect(name).toHaveProperty("value", "My documents");
   fireEvent.change(name, { target: { value: "" } });
   fireEvent.change(type, { target: { value: "sftp" } });
@@ -2435,7 +2453,7 @@ test("editing preserves values across tabs and saves them together", async () =>
   vi.mocked(api.update).mockResolvedValue();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit drive" }));
-  fireEvent.change(screen.getByLabelText("Drive name"), { target: { value: "Renamed drive" } });
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), { target: { value: "Renamed drive" } });
   fireEvent.click(screen.getByLabelText("Connect automatically when SDrive starts"));
   fireEvent.click(screen.getByRole("tab", { name: "Files" }));
   fireEvent.change(screen.getByLabelText("Folder / bucket / share"), { target: { value: "Documents" } });
@@ -2443,7 +2461,7 @@ test("editing preserves values across tabs and saves them together", async () =>
   fireEvent.click(screen.getByRole("tab", { name: "Network" }));
   fireEvent.change(screen.getByLabelText("Download limit (KiB/s)"), { target: { value: "512" } });
   fireEvent.click(screen.getByRole("tab", { name: "General" }));
-  expect((screen.getByLabelText("Drive name") as HTMLInputElement).value).toBe("Renamed drive");
+  expect((screen.getByLabelText(/^Drive name(?: \(optional\))?$/) as HTMLInputElement).value).toBe("Renamed drive");
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(api.update).toHaveBeenCalledWith(expect.objectContaining({
     name: "Renamed drive", autoMount: true, path: "Documents", directoryCacheSeconds: 600, downloadLimit: 512 * 1024,
@@ -2482,7 +2500,7 @@ test("multiple invalid panels keep the first invalid field visible", async () =>
   vi.mocked(api.snapshot).mockResolvedValue({ ...snapshot, connections: [connection] });
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit drive" }));
-  fireEvent.change(screen.getByLabelText("Drive name"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), { target: { value: "" } });
   fireEvent.click(screen.getByRole("tab", { name: "Files" }));
   fireEvent.change(screen.getByLabelText("Directory metadata lifetime (seconds)"), { target: { value: "-1" } });
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
@@ -2717,7 +2735,7 @@ test("the unified editor loads access lazily and saves settings without authenti
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit drive" }));
   expect(api.fields).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText("Drive name"), { target: { value: "Renamed drive" } });
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), { target: { value: "Renamed drive" } });
   fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
   await waitFor(() => expect(api.update).toHaveBeenCalledWith(expect.objectContaining({ name: "Renamed drive" })));
   expect(api.begin).not.toHaveBeenCalled();
@@ -2732,7 +2750,7 @@ test("the unified editor preserves access and settings drafts through explicit r
   vi.mocked(api.mount).mockRejectedValueOnce(new Error("Mount unavailable")).mockResolvedValueOnce();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Edit drive" }));
-  fireEvent.change(screen.getByLabelText("Drive name"), { target: { value: "Renamed drive" } });
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), { target: { value: "Renamed drive" } });
   fireEvent.click(screen.getByRole("tab", { name: "Files" }));
   fireEvent.change(screen.getByLabelText("Folder / bucket / share"), { target: { value: "New folder" } });
   fireEvent.click(screen.getByRole("tab", { name: "Access" }));
@@ -2740,7 +2758,7 @@ test("the unified editor preserves access and settings drafts through explicit r
   fireEvent.change(screen.getByLabelText("Password"), { target: { value: "synthetic-new-secret" } });
   fireEvent.click(screen.getByRole("tab", { name: "General" }));
   expect(screen.getByRole("button", { name: "Save changes" }).matches(":disabled")).toBe(true);
-  expect(screen.getByLabelText("Drive name")).toHaveProperty("value", "Renamed drive");
+  expect(screen.getByLabelText(/^Drive name(?: \(optional\))?$/)).toHaveProperty("value", "Renamed drive");
   fireEvent.click(screen.getByRole("tab", { name: "Access" }));
   expect(screen.getByLabelText("Password")).toHaveProperty("value", "synthetic-new-secret");
   fireEvent.click(screen.getByRole("button", { name: "Renew access" }));
@@ -2765,7 +2783,7 @@ test("failed access loading leaves general settings available and cancellation n
   expect(screen.getByRole("button", { name: "Renew access" }).matches(":disabled")).toBe(true);
   fireEvent.click(screen.getByRole("tab", { name: "General" }));
   expect(screen.getByRole("button", { name: "Save changes" }).matches(":disabled")).toBe(false);
-  fireEvent.change(screen.getByLabelText("Drive name"), { target: { value: "Discard me" } });
+  fireEvent.change(screen.getByLabelText(/^Drive name(?: \(optional\))?$/), { target: { value: "Discard me" } });
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(api.update).not.toHaveBeenCalled();

@@ -25,6 +25,8 @@ const snapshot = { ...fixtures.snapshotEmpty, access, settings: { ...fixtures.sn
   connections: [{ ...connection, capacity: { total: 100 * 1024 ** 3, used: 25 * 1024 ** 3, free: 75 * 1024 ** 3, checkedAt: null, state: "available" } }, { ...connection, id: "visual-second", name: "Team library", letter: "", mountFolder: "C:\\Synthetic\\Team\\" + "Long local directory\\".repeat(12), cardStyle: "violet", serverPath: "https://files.example.test/dav/Projects", path: "Projects", mounted: false },
     { ...connection, id: "visual-long", name: "Shared documents and administrative projects with a deliberately long name", letter: "U", serverPath: "https://files.example.test/dav/" + "Long remote directory/".repeat(8), path: "Long remote directory/".repeat(8), pending: null, recovery: true }],
   importDrafts: [], letters: ["V", "W"], winFsp: true, engineError: "", settingsError: "", desktopWarning: "", startupWarning: "", maintenanceError: "", recoveryHold: false };
+snapshot.providers.push({ ...fixtures.providerEmpty, id: "sftp", name: "SFTP", backend: "sftp", available: true, oauth: false,
+  fields: [field("host", "Host"), field("user", "Username"), field("pass", "Password", true)] });
 const apiSource = `window.visualSnapshot = ${JSON.stringify(snapshot)};
 const current = () => window.visualSnapshot;
 const wait = async name => {
@@ -92,6 +94,27 @@ try {
   };
   const settle = () => page.evaluate(() => Promise.all(document.getAnimations().filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))));
   const capture = async name => { await settle(); return page.screenshot({ path: path.join(artifacts, name + ".png"), fullPage: true }); };
+  const verifySelectedSection = async () => {
+    const selected = page.locator('.dialog-navigation button:is([aria-selected="true"], [aria-current="step"])').last();
+    await selected.hover();
+    await selected.focus();
+    const colors = await selected.evaluate(element => {
+      const forced = matchMedia("(forced-colors: active)").matches;
+      const probe = document.createElement("span");
+      probe.style.backgroundColor = forced ? "Highlight" : "var(--accent)";
+      probe.style.color = forced ? "HighlightText" : "var(--on-accent)";
+      element.append(probe);
+      const actual = getComputedStyle(element), expected = getComputedStyle(probe);
+      const result = { background: actual.backgroundColor, text: actual.color,
+        expectedBackground: expected.backgroundColor, expectedText: expected.color,
+        others: [...element.parentElement.children].filter(other => other !== element && !other.disabled).map(other => getComputedStyle(other).backgroundColor) };
+      probe.remove();
+      return result;
+    });
+    assert.equal(colors.background, colors.expectedBackground, "Current section must use the theme selection fill, including hover and focus");
+    assert.equal(colors.text, colors.expectedText, "Current section must use contrasting text");
+    assert(colors.others.every(background => background !== colors.background), "Current section must differ from the other sections");
+  };
   const bounds = async () => {
     await settle();
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Page horizontal overflow");
@@ -435,6 +458,18 @@ try {
       await page.getByRole("tooltip").waitFor();
       assert.equal(await page.getByRole("tooltip").locator("strong").first().textContent(), topic);
       assert.equal(await page.getByRole("dialog").count(), 0);
+      if (topic === "Details") {
+        assert(await page.locator(".connection-details > div").evaluateAll(rows => rows.every(row => {
+          const label = row.querySelector("dt").getBoundingClientRect(), value = row.querySelector("dd").getBoundingClientRect();
+          return value.left >= label.right && Math.abs(value.top - label.top) < 1 && row.scrollWidth <= row.clientWidth;
+        })), "Detail values must stay beside their labels without horizontal overflow");
+      }
+      if (["Local cache", "Network", "Remote capacity"].includes(topic)) {
+        assert(await page.getByRole("tooltip").evaluate(element => {
+          const note = element.lastElementChild;
+          return note.classList.contains("detail-disclaimer") && getComputedStyle(note.querySelector("em")).fontStyle === "italic";
+        }), "Explanations must be italic and follow all readings");
+      }
       if (topic === "Network") await capture("network-" + viewport.width);
       const box = await page.getByRole("tooltip").boundingBox();
       assert(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1 && box.y + box.height <= viewport.height + 1);
@@ -528,6 +563,7 @@ try {
     }), { width: 44, height: 44 }, "Touch retains 44px icon controls");
   } finally { await touchPage.close(); }
   await page.getByRole("button", { name: "+ New connection", exact: true }).click();
+  await verifySelectedSection();
   await bounds(); await capture("connection-service");
   const help = page.getByRole("button", { name: "Help for Windows drive letter", exact: true });
   await help.hover();
@@ -614,7 +650,9 @@ try {
   await firstCard.getByLabel(/More actions for/).click();
   await firstCard.getByRole("button", { name: "Drive diagnostics", exact: true }).click();
   await page.getByRole("tab", { name: "Applications using a file", exact: true }).click();
+  await verifySelectedSection();
   await page.getByRole("tab", { name: "Test access", exact: true }).click();
+  await verifySelectedSection();
   await page.getByRole("button", { name: "Test access", exact: true }).click();
   await page.getByText("Access test succeeded. Listing folders does not verify write permission.", { exact: true }).waitFor();
   await page.getByRole("tab", { name: "Refresh files in Explorer", exact: true }).click();
@@ -629,19 +667,20 @@ try {
   await page.locator(".drive").nth(1).getByRole("button", { name: "Edit drive", exact: true }).click();
   for (const section of ["General", "Access", "Files", "Network"]) {
     await page.getByRole("tab", { name: section, exact: true }).click();
+    await verifySelectedSection();
     await bounds(); await capture("edit-drive-" + section.toLowerCase());
   }
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await ensureNavigation(); await page.getByRole("button", { name: /^Configuration$/ }).click();
-  for (const tab of ["General", "Cache", "Network", "Configuration"]) {
-    await page.getByRole("tab", { name: tab, exact: true }).click(); await bounds(); await capture("preferences-" + tab.toLowerCase());
+  for (const tab of ["General", "Cache", "Network", "Export/Import"]) {
+    await page.getByRole("tab", { name: tab, exact: true }).click(); await verifySelectedSection(); await bounds(); await capture("preferences-" + tab.toLowerCase());
   }
   await openSettingsSection("Customize");
   await page.getByRole("tab", { name: "Appearance", exact: true }).click();
   assert.equal(await page.getByLabel("Drive card stripe").count(), 0);
   assert.equal(await page.locator(".drives").getAttribute("data-stripe-source"), null);
   await openSettingsSection("Configuration");
-  await page.getByRole("tab", { name: "Configuration", exact: true }).click();
+  await page.getByRole("tab", { name: "Export/Import", exact: true }).click();
   await page.getByRole("button", { name: "Import configuration", exact: true }).click();
   assert.equal(await page.getByRole("dialog").count(), 2, "Import opens above Preferences");
   await bounds(); await capture("import-review");
@@ -740,7 +779,7 @@ try {
   assert(await page.locator(".shell").evaluate(e => e.classList.contains("sidebar-collapsed")));
   await bounds(); await capture("collapsed-navigation");
   await page.locator(".sidebar-toggle").click();
-  for (const theme of ["retro", "outline", "terminal", "editorial", "atelier"]) {
+  for (const theme of ["light", "dark", "retro", "outline", "terminal", "editorial", "atelier"]) {
     for (const language of ["en", "pt-BR"]) {
       const catalog = language === "en" ? {} : JSON.parse(await readFile(path.join(root, "internal/i18n/pt-BR.json"), "utf8"));
       const t = text => catalog[text] || text;
@@ -753,13 +792,45 @@ try {
       for (const width of [1440, 420]) {
         await page.setViewportSize({width, height:900});
         await bounds(); await capture(`${theme}-${language}-${width}`);
+        assert(await page.locator(".brand-title").evaluate(element => element.firstElementChild.tagName === "IMG"), "Logo must precede the SDrive name");
+        await page.getByRole("button", {name:t("+ New connection"), exact:true}).click();
+        const categorySwitch = page.getByRole("switch", {name:t("Advanced"), exact:true});
+        assert.equal(await categorySwitch.isChecked(), false);
+        assert(await page.getByLabel(t("Drive name (optional)"), {exact:true}).isVisible());
+        const verifyMethodRow = async () => {
+          assert(await page.locator(".connection-method-row").evaluate(row => {
+            const category = row.querySelector(".connection-category").getBoundingClientRect();
+            const select = row.querySelector("select").getBoundingClientRect();
+            return category.right <= select.left && category.top < select.bottom && category.bottom > select.top && row.scrollWidth <= row.clientWidth;
+          }), "Category switch must stay immediately left of the connection type on the same row");
+        };
+        await verifyMethodRow();
+        await categorySwitch.focus(); await categorySwitch.press("Space");
+        assert.equal(await categorySwitch.isChecked(), true);
+        await verifyMethodRow();
+        await page.emulateMedia({forcedColors:"active"}); await bounds();
+        await categorySwitch.press("Space");
+        assert.equal(await categorySwitch.isChecked(), false);
+        await page.emulateMedia({forcedColors:"none"});
+        await capture(`${theme}-${language}-${width}-connection-method`);
+        await page.getByRole("combobox", {name:t("Connection type"), exact:true}).selectOption("sftp");
+        await page.getByRole("button", {name:t("Continue"), exact:true}).click();
+        assert(await page.locator(".ssh-identity-prompt").evaluate(prompt => {
+          const text = prompt.querySelector("p").getBoundingClientRect(), button = prompt.querySelector("button").getBoundingClientRect();
+          return button.left >= text.right && button.top < text.bottom && button.bottom > text.top && prompt.scrollWidth <= prompt.clientWidth;
+        }), "SSH verification must stay beside its highlighted identity warning");
+        await bounds(); await capture(`${theme}-${language}-${width}-ssh-verification`);
+        await page.getByRole("button", {name:t("Close setup"), exact:true}).click();
         await ensureNavigation();
         await page.getByRole("button", {name:t("Customize"), exact:true}).click();
         if (width === 420) await page.locator(".dialog-navigation .navigation-toggle").click();
         await page.getByRole("tab", {name:t("Appearance"), exact:true}).click();
         assert.equal(await page.getByLabel(t("Theme"), {exact:true}).inputValue(), theme);
+        if (width === 420) await page.locator(".dialog-navigation .navigation-toggle").click();
+        await verifySelectedSection();
         await bounds(); await capture(`${theme}-${language}-${width}-settings`);
         await page.emulateMedia({forcedColors:"active"});
+        await verifySelectedSection();
         await bounds();
         assert.equal(await page.locator(".dialog-footer .primary").evaluate(e => getComputedStyle(e).boxShadow), "none");
         await page.emulateMedia({forcedColors:"none"});

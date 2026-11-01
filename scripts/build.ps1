@@ -1,4 +1,5 @@
-param([switch]$Installer, [switch]$Check)
+param([switch]$Installer, [switch]$OfflineInstaller, [switch]$Check)
+if ($OfflineInstaller) { $Installer = $true }
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
@@ -36,8 +37,8 @@ try {
     & './bin/SDrive-check.exe' --self-check
     if ($LASTEXITCODE) { throw 'Integrated check failed' }
     if ($Installer) {
-        & "$PSScriptRoot/package.ps1"
+        & "$PSScriptRoot/package.ps1" -Offline:$OfflineInstaller
     }
-    & "$PSScriptRoot/test-windows-resources.ps1" -IncludeInstallers:$Installer
+    & "$PSScriptRoot/test-windows-resources.ps1" -IncludeInstallers:$Installer -IncludeOffline:$OfflineInstaller
     Write-Output "Build ready at $projectRoot/bin"
 } finally { Pop-Location }

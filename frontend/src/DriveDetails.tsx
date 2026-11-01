@@ -91,17 +91,18 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
     </> },
     { key: "cache", title: "Local cache", visible: cacheVisible, tone: c.cache.error ? "danger" : cacheUnknown ? "warning" : "info", content: <>
       <p>{t("Approximate cache used: {used} · Pending file sizes: {pending}", { used: bytes(c.cache.usedBytes), pending: bytes(c.cache.pendingBytes) })}</p>
-      <p>{t("Pending sizes are whole local files, not bytes remaining to upload.")}</p>
       <p>{c.cache.checkedAt ? t("Local inspection: {time} (updated every 30 s)", { time: new Date(c.cache.checkedAt).toLocaleTimeString() }) : t("Local cache inspection unavailable")}</p>
       {c.cache.error && <p>{t(c.cache.error)}</p>}
+      <p className="detail-disclaimer"><em>{t("Pending sizes are whole local files, not bytes remaining to upload.")}</em></p>
     </> },
     { key: "network", title: "Network", visible: c.mounted || !!c.network?.state, tone: !c.network?.checkedAt || c.network?.state === "stale" || c.network?.partial ? "warning" : "info", content:
       <NetworkDetails network={c.network || { state: "unavailable", partial: false, startedAt: null, checkedAt: null, sent: null, received: null, filesSent: null, filesReceived: null }} mounted={c.mounted} /> },
     { key: "capacity", title: "Remote capacity", visible: c.mounted && c.capacity.state !== "unsupported", tone: c.capacity.state === "available" ? "info" : "warning", content: <>
       <p>{t("Remote capacity: {total} · Used: {used} · Available: {free}", { total: bytes(c.capacity.total), used: bytes(c.capacity.used), free: bytes(c.capacity.free) })}</p>
-      <p>{t(c.capacity.state === "available" || c.capacity.state === "stale" ? "Capacity is reported by the provider and may cover the whole account. It is separate from the local cache disk." : "Remote capacity is currently unknown.")}</p>
+      {c.capacity.state !== "available" && c.capacity.state !== "stale" && <p>{t("Remote capacity is currently unknown.")}</p>}
       {c.capacity.state === "stale" && <p>{t("Capacity update failed. Last values retained.")}</p>}
       {c.capacity.checkedAt && <p>{t("Last capacity reading: {time}", { time: new Date(c.capacity.checkedAt).toLocaleString() })}</p>}
+      {(c.capacity.state === "available" || c.capacity.state === "stale") && <p className="detail-disclaimer"><em>{t("Capacity is reported by the provider and may cover the whole account. It is separate from the local cache disk.")}</em></p>}
     </> },
     { key: "security", title: "Connection security", visible: c.mounted, tone: security === "encrypted" ? "success" : security === "unencrypted" ? "inactive" : "warning", content:
       <TransportStatus connection={c} /> },

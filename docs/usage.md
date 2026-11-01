@@ -57,7 +57,7 @@ Updates are manual:
 2. Run a compatible online or offline installer. Both preserve your profile. Do not run the installer while SDrive is active.
 3. Reopen SDrive and check **About SDrive** for the installed and running component information. If installation fails or components are missing, preserve the profile and rerun the compatible installer to repair it.
 
-An interrupted or failed installation is not a successful update; replacement is not guaranteed to be transactional. The offline installer can help when prerequisite downloads are restricted.
+An interrupted or failed installation is not a successful update; replacement is not guaranteed to be transactional. When prerequisite downloads are restricted, an offline installer can be built on demand using the instructions in [Development](development.md#online-and-offline-installers). It is not included in standard releases.
 
 If SDrive reports an unsupported settings version, use the application that created it or a compatible newer release. Do not delete or edit settings, restore an older backup to bypass incompatibility, or remove keys, cache or recovery markers. For damaged preferences, follow [local settings recovery](security.md#local-settings-recovery).
 

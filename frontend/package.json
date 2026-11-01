@@ -1,7 +1,7 @@
 {
   "name": "sdrive-ui",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "releaseDate": "2026-10-31",
   "type": "module",
   "scripts": {

@@ -64,7 +64,7 @@ jobs:
         run: |
           $version = (Get-Content -LiteralPath 'frontend/package.json' -Raw | ConvertFrom-Json).version
           if ($version -cnotmatch '^\d+\.\d+\.\d+$') { throw 'Artifacts require a stable three-part package version' }
-          foreach ($name in @("SDrive-$version-setup.exe", "SDrive-$version-offline-setup.exe")) {
+          foreach ($name in @("SDrive-$version-setup.exe")) {
             if (!(Test-Path -LiteralPath "bin/$name" -PathType Leaf)) { throw "Missing installer: $name" }
           }
           "version=$version" >> $env:GITHUB_OUTPUT
@@ -74,7 +74,6 @@ jobs:
           if-no-files-found: error
           path: |
             bin/SDrive-${{ steps.package.outputs.version }}-setup.exe
-            bin/SDrive-${{ steps.package.outputs.version }}-offline-setup.exe
             bin/SDrive-source.zip
             bin/rclone-source.zip
             bin/SHA256SUMS
