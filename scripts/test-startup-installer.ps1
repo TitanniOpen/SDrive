@@ -20,7 +20,7 @@ try {
     $match = [regex]::Match($source, '(?s)  retry_restore_startup:.*?(?=SectionEnd)')
     if (-not $match.Success) { throw 'Production startup restoration block not found' }
     $strings = Get-Content -Raw -LiteralPath "$PSScriptRoot/../installer/languages.nsh"
-    $message = [regex]::Match($strings, '(?m)^LangString RestoreStartupFailed \$\{LANG_ENGLISH\} .*').Value
+    $message = ([regex]::Matches($strings, '(?m)^LangString RestoreStartup(?:Failed|Deferred) \$\{LANG_ENGLISH\} .*') | ForEach-Object Value) -join "`n"
     if (-not $message) { throw 'Production startup error message not found' }
     Compile 'installer' @'
 Unicode true
@@ -52,11 +52,15 @@ Section
   FileWrite $0 "restored"
   FileClose $0
   IfFileExists "$EXEDIR\fail" failure
+  IfFileExists "$EXEDIR\recovery" deferred
   SetErrorLevel 0
   Quit
   failure:
   SetErrorLevel 1
   Quit
+  deferred:
+    SetErrorLevel 2
+    Quit
   wrong_arguments:
   SetErrorLevel 3
 SectionEnd
@@ -66,10 +70,14 @@ SectionEnd
     if ((Get-Content -Raw -LiteralPath "$workspace/called.txt") -ne 'restored') { throw 'Installed executable was not called' }
     Set-Content -LiteralPath "$workspace/fail" -Value 'registry denied'
     Run "$workspace/installer.exe" 1
+    Remove-Item -LiteralPath "$workspace/fail"
+    Set-Content -LiteralPath "$workspace/recovery" -Value 'pending recovery'
+    Run "$workspace/installer.exe" 0
+    Remove-Item -LiteralPath "$workspace/recovery"
     Remove-Item -LiteralPath "$workspace/SDrive.exe"
     Run "$workspace/installer.exe" 1
     if ((Get-Content -LiteralPath "$workspace/settings.json") -ne 'preserved profile') { throw 'Failure changed profile' }
-    Write-Output 'PASS startup installer: installed helper, exact arguments, success, helper failure, launch failure, silent cancellation and preserved profile'
+    Write-Output 'PASS startup installer: installed helper, exact arguments, success, deferred recovery, helper failure, launch failure, silent cancellation and preserved profile'
 } finally {
     $resolved = [IO.Path]::GetFullPath($workspace)
     if ((Split-Path $resolved -Parent) -ne [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') -or (Split-Path $resolved -Leaf) -notlike 'sdrive-startup-test-*') { throw 'Unsafe fixture cleanup path' }

@@ -59,6 +59,8 @@ Updates are manual:
 
 An interrupted or failed installation is not a successful update; replacement is not guaranteed to be transactional. When prerequisite downloads are restricted, an offline installer can be built on demand using the instructions in [Development](development.md#online-and-offline-installers). It is not included in standard releases.
 
+If an installation reports that Windows startup restoration was deferred, SDrive is installed successfully. Complete the pending recovery in the application and reopen it to restore your saved startup preference. Keep the profile and cache until recovery is resolved.
+
 If SDrive reports an unsupported settings version, use the application that created it or a compatible newer release. Do not delete or edit settings, restore an older backup to bypass incompatibility, or remove keys, cache or recovery markers. For damaged preferences, follow [local settings recovery](security.md#local-settings-recovery).
 
 ## Collect diagnostics and report a problem

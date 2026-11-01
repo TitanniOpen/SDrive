@@ -233,7 +233,11 @@ Section "SDrive"
   retry_restore_startup:
   ClearErrors
   ExecWait '"$INSTDIR\SDrive.exe" --restore-startup' $0
-  ${If} ${Errors}
+  ${IfNot} ${Errors}
+  ${AndIf} $0 == 2
+    DetailPrint "$(RestoreStartupDeferred)"
+    MessageBox MB_OK|MB_ICONINFORMATION "$(RestoreStartupDeferred)" /SD IDOK
+  ${ElseIf} ${Errors}
   ${OrIf} $0 != 0
     MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(RestoreStartupFailed)" /SD IDCANCEL IDRETRY retry_restore_startup
     SetErrorLevel 1

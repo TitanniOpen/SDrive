@@ -1,12 +1,15 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"sdrive/internal/platform"
 )
+
+var ErrStartupRecovery = errors.New("resolve profile recovery before restoring sign-in startup")
 
 // RestoreStartup applies only the saved desktop integration, without starting a service.
 func RestoreStartup(dir string) error {
@@ -23,12 +26,14 @@ func restoreStartup(dir string, matches func(bool) (bool, error), update func(bo
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(filepath.Join(dir, recoveryMarker)); !os.IsNotExist(err) {
-		return fmt.Errorf("resolve settings recovery before restoring sign-in startup")
+	if _, err := os.Stat(filepath.Join(dir, recoveryMarker)); err == nil {
+		return ErrStartupRecovery
+	} else if !os.IsNotExist(err) {
+		return err
 	}
 	for _, connection := range store.Connections {
 		if connection.Recovery {
-			return fmt.Errorf("resolve connection recovery before restoring sign-in startup")
+			return ErrStartupRecovery
 		}
 	}
 	ok, err := matches(store.Settings.AutoStart)

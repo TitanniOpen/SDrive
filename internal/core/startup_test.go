@@ -88,7 +88,31 @@ func TestRestoreStartupRejectsUntrustedSettings(t *testing.T) {
 			if (err == nil) != (scenario == "missing") {
 				t.Fatalf("unexpected restoration result: %v", err)
 			}
+			if errors.Is(err, ErrStartupRecovery) != (scenario == "marker" || scenario == "connection") {
+				t.Fatalf("incorrect recovery classification: %v", err)
+			}
 		})
+	}
+}
+
+func TestRestoreStartupResumesAfterConnectionRecovery(t *testing.T) {
+	dir := t.TempDir()
+	store := defaultStore()
+	store.Settings.AutoStart = true
+	store.Connections = []Connection{testConnection()}
+	if err := saveStore(dir, store); err != nil {
+		t.Fatal(err)
+	}
+	if err := restoreStartup(dir, func(bool) (bool, error) { t.Fatal("recovery read startup"); return false, nil }, func(bool) error { t.Fatal("recovery changed startup"); return nil }); !errors.Is(err, ErrStartupRecovery) {
+		t.Fatal("recovery did not defer restoration", err)
+	}
+	store.Connections[0].Recovery = false
+	if err := saveStore(dir, store); err != nil {
+		t.Fatal(err)
+	}
+	enabled := false
+	if err := restoreStartup(dir, func(want bool) (bool, error) { return enabled == want, nil }, func(want bool) error { enabled = want; return nil }); err != nil || !enabled {
+		t.Fatal("startup was not restored after recovery", err)
 	}
 }
 

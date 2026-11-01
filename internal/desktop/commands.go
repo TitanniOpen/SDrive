@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"unicode/utf16"
 
+	"sdrive/internal/core"
 	"sdrive/internal/platform"
 )
 
@@ -36,6 +37,9 @@ func handleCommand(prerequisiteManifest []byte) bool {
 	if len(os.Args) == 2 && os.Args[1] == "--restore-startup" {
 		if err := restoreStartup(); err != nil {
 			fmt.Fprintln(os.Stderr, err)
+			if errors.Is(err, core.ErrStartupRecovery) {
+				os.Exit(2)
+			}
 			os.Exit(1)
 		}
 		return true
