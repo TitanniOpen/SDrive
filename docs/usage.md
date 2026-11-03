@@ -4,12 +4,9 @@ This guide covers everyday use on Windows. For a quick introduction, see the [RE
 
 ## Install and connect
 
-SDrive requires Windows 10 22H2 (build 19045) or Windows 11, on x64 Intel or AMD hardware. Both systems use the same installers and application, with no compatibility setting required.
+SDrive requires Windows 10 22H2 (build 19045) or Windows 11, on x64 Intel or AMD hardware. Both systems use the same online installer and application, with no compatibility setting required.
 
-Choose an installer from the repository's Releases page:
-
-- **Online installer:** recommended for most users. It includes SDrive and its storage engine and downloads missing Windows components automatically.
-- **Offline installer:** includes the same application and all required components for installation without internet access. Signing in and accessing remote storage still require connectivity.
+Download the online installer from the repository's Releases page. It includes SDrive and its storage engine and downloads missing Windows components automatically. Internet access is required when those components are missing.
 
 Compatible WinFsp and WebView2 installations are reused. Follow the progress in the installer window. If a download fails, choose **Retry** or **Cancel**. Allow Windows to prepare virtual drives if prompted, and restart only if the installer requests it. The application runs without administrator privileges; preparing the drive component can require administrator approval.
 
@@ -54,10 +51,10 @@ For portable configuration and optional Explorer integration, see [configuration
 Updates are manual:
 
 1. Close files in other applications, wait for uploads and choose **Exit safely**. If exit is blocked, complete recovery at the original destination first. Closing the window only hides SDrive in the tray.
-2. Run a compatible online or offline installer. Both preserve your profile. Do not run the installer while SDrive is active.
+2. Run a compatible online installer. It preserves your profile. Do not run the installer while SDrive is active.
 3. Reopen SDrive and check **About SDrive** for the installed and running component information. If installation fails or components are missing, preserve the profile and rerun the compatible installer to repair it.
 
-An interrupted or failed installation is not a successful update; replacement is not guaranteed to be transactional. When prerequisite downloads are restricted, an offline installer can be built on demand using the instructions in [Development](development.md#online-and-offline-installers). It is not included in standard releases.
+An interrupted or failed installation is not a successful update; replacement is not guaranteed to be transactional.
 
 If an installation reports that Windows startup restoration was deferred, SDrive is installed successfully. Complete the pending recovery in the application and reopen it to restore your saved startup preference. Keep the profile and cache until recovery is resolved.
 

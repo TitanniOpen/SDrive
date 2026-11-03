@@ -6,6 +6,8 @@ Push-Location $projectRoot
 try {
     & "$PSScriptRoot/bootstrap.ps1"
     $go = Join-Path $projectRoot '.tools/go/bin/go.exe'
+    & $go test ./internal/core -run '^TestProductionURLLiteralsUseStructuredResources$' -count=1
+    if ($LASTEXITCODE) { throw 'Fixed URL storage verification failed' }
     & "$PSScriptRoot/windows-resources.ps1"
     Push-Location frontend
     try {
@@ -36,6 +38,8 @@ try {
     if ($LASTEXITCODE) { throw 'Diagnostic build failed' }
     & './bin/SDrive-check.exe' --self-check
     if ($LASTEXITCODE) { throw 'Integrated check failed' }
+    node scripts/check-help-links.mjs bin/SDrive.exe bin/SDrive-check.exe
+    if ($LASTEXITCODE) { throw 'Help URL boundary verification failed' }
     if ($Installer) {
         & "$PSScriptRoot/package.ps1" -Offline:$OfflineInstaller
     }

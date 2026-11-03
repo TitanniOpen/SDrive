@@ -20,7 +20,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Windows version, online or offline installer, and relevant connection type or component versions. Omit private account and server identifiers.
+      description: Windows version, installer version, and relevant connection type or component versions. Omit private account and server identifiers.
     validations:
       required: true
   - type: textarea

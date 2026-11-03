@@ -2,7 +2,7 @@
 
 ## Windows startup after reinstalling
 
-The local `settings.json` remains the source of truth for **Start with Windows**. Uninstalling removes the Windows startup entry while preserving the profile. Both installers restore that preference before finishing, even when you do not launch the application. Opening SDrive also reconciles a missing entry or an outdated executable path. Disable startup in SDrive Preferences to keep it disabled; external removal of its Run entry is repaired on the next launch. Separate Windows startup-disable controls are left untouched.
+The local `settings.json` remains the source of truth for **Start with Windows**. Uninstalling removes the Windows startup entry while preserving the profile. The installer restores that preference before finishing, even when you do not launch the application. Opening SDrive also reconciles a missing entry or an outdated executable path. Disable startup in SDrive Preferences to keep it disabled; external removal of its Run entry is repaired on the next launch. Separate Windows startup-disable controls are left untouched.
 
 The installer runs the installed executable with `--restore-startup`. This command locks the profile and only reconciles startup: it does not launch the interface, start engines, mount drives, access credentials or rewrite settings. A missing profile is a no-op. Invalid or incompatible settings and pending recovery prevent reconciliation. PIN protection does not prevent restoring this saved integration and remains enforced when the application opens.
 

@@ -87,7 +87,7 @@ For safe manual updates, repair and incompatible settings, follow the [user inst
 
 Tool versions and files are pinned; tool files use SHA-256 and Go sources use module/SumDB checksums. Checksums do not prove that a binary exactly reproduces its source. Local builds do not have a publisher's digital signature.
 
-The online installer includes SDrive and rclone and downloads WinFsp/WebView2 only when needed. The offline alternative includes all components. Downloads accept only HTTPS and files defined in the embedded manifest, with size and time limits. Partial files are never executed. Both variants verify SHA-256, Authenticode signature and publisher before executing each component; the file remains open without write/delete sharing until execution finishes. Signature trust uses local Windows certificates without mandatory online revocation checks.
+The online installer includes SDrive and rclone and downloads WinFsp/WebView2 only when needed. Downloads accept only HTTPS and files defined in the embedded manifest, with size and time limits. Partial files are never executed. The installer verifies SHA-256, Authenticode signature and publisher before executing each component; the file remains open without write/delete sharing until execution finishes. Signature trust uses local Windows certificates without mandatory online revocation checks.
 
 Only the official WinFsp MSI requests elevation. SDrive and downloads run as the regular user. Uninstalling SDrive does not remove shared components. Installer-requested restarts are communicated, never forced.
 
