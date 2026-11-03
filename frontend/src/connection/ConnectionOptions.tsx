@@ -38,7 +38,7 @@ export function NetworkOptions({ wizard }: { wizard: Wizard }) {
       <input type="number" min="0" max="1073741824" step="1" disabled={initial.recovery} {...validationProps("bandwidth")} value={(c[key] || 0) / 1024} onChange={(e) => change({ [key]: Number(e.target.value) * 1024 })} />
     </label>)}
     {fieldFeedback("bandwidth")}
-    <label className="check"><input type="checkbox" {...validationProps("useProxy")} checked={c.useProxy || false} disabled={initial.recovery} onChange={(e) => change({ useProxy: e.target.checked })} />{t("Use the proxy configured in Preferences")}</label>
+    <label className="check setting-switch"><input type="checkbox" role="switch" {...validationProps("useProxy")} checked={c.useProxy || false} disabled={initial.recovery} onChange={(e) => change({ useProxy: e.target.checked })} />{t("Use the proxy configured in Preferences")}</label>
     {fieldFeedback("useProxy")}
     {dav && <>
       {(["connectTimeout", "idleTimeout"] as const).map((key) => <label key={key}>{t(key === "connectTimeout" ? "Connection timeout (seconds)" : "HTTP idle timeout (seconds)")}<input type="number" min="0" max="3600" disabled={initial.recovery} {...validationProps(key)} value={c[key] || 0} onChange={(e) => change({ [key]: Number(e.target.value) })} />{fieldFeedback(key)}</label>)}
@@ -62,11 +62,11 @@ export function ConnectionOptions({ wizard }: { wizard: Wizard }) {
       {wizard.p.oauth && c.authMethod !== "serviceAccount" && <>
         <label>{t("Sign-in browser")}<select {...validationProps("browser")} value={c.browser || ""} onChange={(e) => change({ browser: e.target.value })}>{browsers.map((b) => <option key={b.id} value={b.id}>{t(b.name)}</option>)}{c.browser && !browsers.some((b) => b.id === c.browser) && <option value={c.browser}>{t("Selected browser unavailable")}</option>}</select></label>
         {fieldFeedback("browser")}
-        <label className="check"><input type="checkbox" checked={c.privateBrowser || false} onChange={(e) => change({ privateBrowser: e.target.checked })} />{t("Open a private sign-in window")}</label>
+        <label className="check setting-switch"><input type="checkbox" role="switch" checked={c.privateBrowser || false} onChange={(e) => change({ privateBrowser: e.target.checked })} />{t("Open a private sign-in window")}</label>
       </>}
       {sessionSupported && <>
         <div className="option-with-help">
-          <label className="check"><input type="checkbox" checked={c.sessionOnly || false} disabled={initial.recovery} onChange={(e) => change({ sessionOnly: e.target.checked, autoMount: e.target.checked ? false : c.autoMount })} />{t("Sign in on every connection (credentials only in memory)")}</label>
+          <label className="check setting-switch"><input type="checkbox" role="switch" checked={c.sessionOnly || false} disabled={initial.recovery} onChange={(e) => change({ sessionOnly: e.target.checked, autoMount: e.target.checked ? false : c.autoMount })} />{t("Sign in on every connection (credentials only in memory)")}</label>
           <FieldHelp label={t("Sign in on every connection")}>{t("Session-only sign-in requires a verifiable destination. After disconnecting or reopening, sign in again to the original storage. Browser sessions may still be reused.")}</FieldHelp>
         </div>
         {fieldFeedback("sessionOnly")}

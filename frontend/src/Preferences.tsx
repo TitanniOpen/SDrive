@@ -102,9 +102,9 @@ export function Preferences({
                 {Object.entries(languages).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
               </select>
             </label>
-            <label className="check">
+            <label className="check setting-switch">
               <input
-                type="checkbox"
+                type="checkbox" role="switch"
                 checked={settings.autoStart}
                 onChange={(e) =>
                   setSettings((s) => ({ ...s, autoStart: e.target.checked }))
@@ -120,7 +120,7 @@ export function Preferences({
               const theme = e.target.value as Theme; setSettings({ ...settings, theme }); setPreview(theme);
             }}>{Object.entries(themeLabels).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select></label>
             <p>{t("System follows your Windows theme. Save to keep the preview; Cancel restores the saved theme.")}</p>
-            <label className="check"><input type="checkbox" disabled={data.platform === "linux"} checked={settings.showServiceIcons || false} onChange={(e) => setSettings({ ...settings, showServiceIcons: e.target.checked })} />{t("Show service icons for drive letters")}</label>
+            <label className="check setting-switch"><input type="checkbox" role="switch" disabled={data.platform === "linux"} checked={settings.showServiceIcons || false} onChange={(e) => setSettings({ ...settings, showServiceIcons: e.target.checked })} />{t("Show service icons for drive letters")}</label>
             {data.platform === "linux" && <p>{t("Drive-letter icons are available only on Windows.")}</p>}
             <p>{t("Service icons are local monograms for SDrive drive letters. Existing customization takes precedence; mounted folders keep their icons.")}</p>
           </div>

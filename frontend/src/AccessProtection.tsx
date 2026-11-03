@@ -143,8 +143,8 @@ export function AccessSettings({ onClose }: { onClose: () => void }) {
       <fieldset disabled={status?.platform === "linux"}><label>{t("Lock after computer inactivity (minutes; 0 disables)")}<input type="number" min="0" max="1440" required value={policy.idleMinutes} onChange={(e) => {
         const idleMinutes = Number(e.target.value); setPolicy({ ...policy, idleMinutes, disconnectIdle: idleMinutes > 0 && policy.disconnectIdle, reconnect: idleMinutes > 0 && policy.reconnect });
       }} /></label>
-      <label className="check"><input type="checkbox" disabled={!policy.idleMinutes} checked={policy.disconnectIdle} onChange={(e) => setPolicy({ ...policy, disconnectIdle: e.target.checked, reconnect: e.target.checked && policy.reconnect })} />{t("Disconnect safely after inactivity")}</label>
-      <label className="check"><input type="checkbox" disabled={!policy.disconnectIdle} checked={policy.reconnect} onChange={(e) => setPolicy({ ...policy, reconnect: e.target.checked })} />{t("Reconnect idle-disconnected drives after unlock")}</label>
+      <label className="check setting-switch"><input type="checkbox" role="switch" disabled={!policy.idleMinutes} checked={policy.disconnectIdle} onChange={(e) => setPolicy({ ...policy, disconnectIdle: e.target.checked, reconnect: e.target.checked && policy.reconnect })} />{t("Disconnect safely after inactivity")}</label>
+      <label className="check setting-switch"><input type="checkbox" role="switch" disabled={!policy.disconnectIdle} checked={policy.reconnect} onChange={(e) => setPolicy({ ...policy, reconnect: e.target.checked })} />{t("Reconnect idle-disconnected drives after unlock")}</label>
       <p>{t("Open files, pending uploads or unknown cache state may prevent disconnection. Sign-in or recovery may be required after unlocking.")}</p></fieldset>
     </fieldset></form>}
   </DialogLayout>;

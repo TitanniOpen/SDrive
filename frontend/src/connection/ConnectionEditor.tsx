@@ -137,9 +137,9 @@ export function ConnectionEditor(props: EditorProps) {
                   p.id,
                 ) && (
                   <>
-                    <div className="option-with-help"><label className="check">
+                    <div className="option-with-help"><label className="check setting-switch">
                       <input
-                        type="checkbox"
+                        type="checkbox" role="switch"
                         aria-describedby={`${fieldID}-insecure-help`}
                         checked={insecure}
                         onChange={(e) => setInsecure(e.target.checked)}
@@ -150,11 +150,11 @@ export function ConnectionEditor(props: EditorProps) {
                   </>
                 )}
                 </fieldset>}
-                {!initial.id && <label className="check"><input type="checkbox" checked={connection.openExplorerAfterConnect || false} onChange={(e) => change({ openExplorerAfterConnect: e.target.checked })} />{t("Open Explorer after connecting")}</label>}
+                {!initial.id && <label className="check setting-switch"><input type="checkbox" role="switch" checked={connection.openExplorerAfterConnect || false} onChange={(e) => change({ openExplorerAfterConnect: e.target.checked })} />{t("Open Explorer after connecting")}</label>}
                 {(!initial.id || connection.provider === "drive") && <fieldset className="option-group"><legend>{t("Drive behavior")}</legend>
-                <div className="option-with-help"><label className="check">
+                <div className="option-with-help"><label className="check setting-switch">
                   <input
-                    type="checkbox"
+                    type="checkbox" role="switch"
                     aria-describedby={`${fieldID}-readonly-help`}
                     checked={connection.readOnly}
                     disabled={initial.recovery}
@@ -164,9 +164,9 @@ export function ConnectionEditor(props: EditorProps) {
                 </label>
                 <FieldHelp id={`${fieldID}-readonly-help`} label={t("Mount read only")}>{t("Prevents changes through this drive. Account permissions remain unchanged.")}</FieldHelp></div>
                 {!initial.id && !connection.sessionOnly && <>
-                <div className="option-with-help"><label className="check">
+                <div className="option-with-help"><label className="check setting-switch">
                   <input
-                    type="checkbox"
+                    type="checkbox" role="switch"
                     aria-describedby={`${fieldID}-automount-help`}
                     disabled={connection.sessionOnly}
                     checked={connection.autoMount}
@@ -317,11 +317,11 @@ export function ConnectionEditor(props: EditorProps) {
               </label>
               {fieldFeedback("name")}
               <MountDestination wizard={wizard} />
-              <label className="check"><input type="checkbox" checked={connection.openExplorerAfterConnect || false} onChange={(e) => change({ openExplorerAfterConnect: e.target.checked })} />{t("Open Explorer after connecting")}</label>
+              <label className="check setting-switch"><input type="checkbox" role="switch" checked={connection.openExplorerAfterConnect || false} onChange={(e) => change({ openExplorerAfterConnect: e.target.checked })} />{t("Open Explorer after connecting")}</label>
               {connection.provider !== "drive" && <>
-              <div className="option-with-help"><label className="check">
+              <div className="option-with-help"><label className="check setting-switch">
                 <input
-                  type="checkbox"
+                  type="checkbox" role="switch"
                   aria-describedby={`${fieldID}-readonly-help`}
                   checked={connection.readOnly}
                   onChange={(e) => change({ readOnly: e.target.checked })}
@@ -332,9 +332,9 @@ export function ConnectionEditor(props: EditorProps) {
               </>}
               {connection.provider === "drive" && <p>{t("Use the Access section to change Google Drive access mode and update OAuth consent.")}</p>}
               {!connection.sessionOnly && <>
-              <div className="option-with-help"><label className="check">
+              <div className="option-with-help"><label className="check setting-switch">
                 <input
-                  type="checkbox"
+                  type="checkbox" role="switch"
                   aria-describedby={`${fieldID}-automount-help`}
                   disabled={connection.sessionOnly}
                       checked={connection.autoMount}

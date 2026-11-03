@@ -37,6 +37,18 @@ test("appearance saves only the selected visual fields and cancel leaves the dri
   expect(api.updateDriveAppearance).toHaveBeenCalledWith("drive", { cardStyle: "teal", iconImage: connection.iconImage });
 });
 
+test("clicking the drawer backdrop cancels the draft, while clicks inside do not", () => {
+  const close = vi.fn();
+  render(<LanguageProvider><DriveAppearanceDialog connection={connection} unavailable={false} onClose={close} onSave={vi.fn()} /></LanguageProvider>);
+  const dialog = screen.getByRole("dialog");
+  vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue({ left: 100, right: 500, top: 20, bottom: 600 } as DOMRect);
+  fireEvent.click(dialog, { clientX: 200, clientY: 100 });
+  expect(close).not.toHaveBeenCalled();
+  fireEvent.click(dialog, { clientX: 50, clientY: 100 });
+  expect(close).toHaveBeenCalledOnce();
+  expect(api.updateDriveAppearance).not.toHaveBeenCalled();
+});
+
 test("failed saves keep the preview open and operations disable saving", async () => {
   vi.mocked(api.updateDriveAppearance).mockRejectedValue(new Error("Save failed"));
   const close = vi.fn();

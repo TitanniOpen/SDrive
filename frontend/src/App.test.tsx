@@ -1086,6 +1086,7 @@ test("native dialog cancellation keeps a busy preference save open", async () =>
   expect(document.getElementById(cache.getAttribute("aria-describedby")!)?.textContent).toContain("Applied on the next mount");
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   cancelDialog();
+  fireEvent.click(screen.getByRole("dialog"), { clientX: -1, clientY: -1 });
   expect(screen.getByRole("dialog").hasAttribute("open")).toBe(true);
   await act(async () => finish());
   expect(screen.queryByRole("dialog")).toBeNull();

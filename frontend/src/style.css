@@ -212,6 +212,7 @@ main > header p { margin: 0; }
 .letter svg { width: 28px; height: 28px; }
 .drive-heading { display: flex; align-items: center; flex-wrap: wrap; gap: calc(7px * var(--spacing-scale)) calc(12px * var(--spacing-scale)); margin-bottom: calc(8px * var(--spacing-scale)); }
 .status-tag, .type-tag { display: inline-block; padding: calc(3px * var(--spacing-scale)) calc(9px * var(--spacing-scale)); border: 1px solid color-mix(in srgb, currentColor 22%, transparent); border-radius: 6px; font-size: calc(12px * var(--text-scale, 1)); line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.status-tag.connected, .status-tag.disconnected { box-shadow: 0 1px 3px #0002; }
 .status-tag.disconnected { background: #39414c; color: #d1d8e0; }
 .status-tag.connected { background: #254b3c; color: #c5ebd7; }
 .status-tag.attention { background: var(--warning-bg); color: var(--warning-text); border-color: var(--warning-border); }
@@ -342,6 +343,13 @@ input[type="checkbox"] { min-height: 18px; height: 18px; width: 18px; margin: 0;
 fieldset { border: 1px solid var(--surface-border); border-radius: 9px; margin: calc(8px * var(--spacing-scale)) 0 calc(16px * var(--spacing-scale)); padding: calc(16px * var(--spacing-scale)); }
 legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padding: 0 calc(8px * var(--spacing-scale)); }
 .check, label:has(> input[type="checkbox"]) { flex-direction: row; align-items: center; min-height: 44px; gap: calc(12px * var(--spacing-scale)); }
+.setting-switch { cursor: pointer; }
+.setting-switch > input[type="checkbox"] { appearance: none; order: 1; width: 36px; height: 22px; min-height: 22px; margin-left: auto; padding: 3px; border: 1px solid var(--border); border-radius: 12px; background: var(--button); cursor: inherit; }
+.setting-switch > input::before { content: ""; display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--text); }
+.setting-switch > input:checked { background: var(--accent); border-color: var(--accent); }
+.setting-switch > input:checked::before { transform: translateX(14px); background: var(--on-accent); }
+.setting-switch > input:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.setting-switch > input:disabled { opacity: .5; cursor: not-allowed; }
 .check + small { display: block; margin: calc(-8px * var(--spacing-scale)) 0 calc(18px * var(--spacing-scale)); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 calc(18px * var(--spacing-scale)); }
 .credential-field, .secret-input { margin-bottom: calc(16px * var(--spacing-scale)); }
@@ -413,6 +421,9 @@ legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padd
 .option-with-help { display: flex; align-items: flex-start; gap: calc(4px * var(--spacing-scale)); }
 .option-with-help > label, .option-with-help > span { flex: 1; }
 .option-with-help > .field-help { flex-shrink: 0; margin: calc(-10px * var(--spacing-scale)) 0 0; }
+.option-with-help:has(> .setting-switch) { position: relative; }
+.option-with-help > .setting-switch { min-width: 0; gap: 52px; }
+.option-with-help:has(> .setting-switch) > .field-help { position: absolute; right: 36px; top: 0; margin: 0; }
 .mount-summary { margin: calc(16px * var(--spacing-scale)) 0; }
 .mount-summary > summary { display: flex; flex-wrap: wrap; gap: calc(6px * var(--spacing-scale)); align-items: center; }
 .mount-summary > summary::before { content: "▸"; }
@@ -569,4 +580,10 @@ legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padd
   .switch-track::before { background: ButtonText; }
   .category-switch > input:checked + .switch-track { background: Highlight; border-color: Highlight; }
   .category-switch > input:checked + .switch-track::before { background: HighlightText; }
+  .setting-switch > input[type="checkbox"] { border-color: ButtonText; background: Canvas; }
+  .setting-switch > input::before { background: ButtonText; }
+  .setting-switch > input:checked { border-color: Highlight; background: Highlight; }
+  .setting-switch > input:checked::before { background: HighlightText; }
+  .setting-switch > input:disabled { border-color: GrayText; opacity: 1; }
+  .setting-switch > input:disabled::before { background: GrayText; }
 }

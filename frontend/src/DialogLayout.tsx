@@ -15,7 +15,13 @@ export function DialogLayout({ dialogRef, title, titleID, children, footer, onCl
   navigation?: ReactNode;
 }) {
   const { t } = useLanguage();
-  return <dialog ref={dialogRef} className={`modal ${centered ? "confirmation" : "drawer"}${navigation ? " with-navigation" : ""}`} aria-modal="true" aria-labelledby={titleID}>
+  return <dialog ref={dialogRef} className={`modal ${centered ? "confirmation" : "drawer"}${navigation ? " with-navigation" : ""}`} aria-modal="true" aria-labelledby={titleID} onClick={(event) => {
+    if (centered || event.target !== event.currentTarget) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+      event.currentTarget.dispatchEvent(new Event("cancel", { cancelable: true }));
+    }
+  }}>
     <header className="dialog-heading">
       <div>{eyebrow && <div className="eyebrow">{eyebrow}</div>}<h2 id={titleID}>{title}</h2></div>
       <button type="button" className="dialog-close" aria-label={closeLabel || t("Close dialog")} disabled={closeDisabled} onClick={onClose}>×</button>

@@ -826,6 +826,16 @@ try {
         if (width === 420) await page.locator(".dialog-navigation .navigation-toggle").click();
         await page.getByRole("tab", {name:t("Appearance"), exact:true}).click();
         assert.equal(await page.getByLabel(t("Theme"), {exact:true}).inputValue(), theme);
+        const settingSwitch = page.getByRole("switch", {name:t("Show service icons for drive letters"), exact:true});
+        assert(await settingSwitch.evaluate(input => {
+          const control = input.getBoundingClientRect(), label = input.closest("label").getBoundingClientRect();
+          return control.width === 36 && control.height === 22 && label.height >= 44 && Math.abs(control.right - label.right) < 1;
+        }), "Setting switch must stay compact and aligned to the right");
+        const previous = await settingSwitch.isChecked();
+        await settingSwitch.focus(); await settingSwitch.press("Space");
+        assert.equal(await settingSwitch.isChecked(), !previous);
+        await settingSwitch.press("Space");
+        assert.equal(await settingSwitch.isChecked(), previous);
         if (width === 420) await page.locator(".dialog-navigation .navigation-toggle").click();
         await verifySelectedSection();
         await bounds(); await capture(`${theme}-${language}-${width}-settings`);

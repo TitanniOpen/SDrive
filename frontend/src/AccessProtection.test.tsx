@@ -102,6 +102,20 @@ test("access settings validate confirmation and retain the one-time recovery cod
   expect(close).toHaveBeenCalledOnce();
 });
 
+test("inactivity switches preserve their dependency and reset reconnect when disabled", async () => {
+  render(<LanguageProvider><AccessSettings onClose={vi.fn()} /></LanguageProvider>);
+  const disconnect = await screen.findByRole("switch", { name: "Disconnect safely after inactivity" }) as HTMLInputElement;
+  const reconnect = screen.getByRole("switch", { name: "Reconnect idle-disconnected drives after unlock" }) as HTMLInputElement;
+  expect(reconnect.disabled).toBe(true);
+  fireEvent.click(disconnect);
+  expect(disconnect.checked).toBe(true);
+  expect(reconnect.disabled).toBe(false);
+  fireEvent.click(reconnect);
+  fireEvent.click(disconnect);
+  expect(reconnect.checked).toBe(false);
+  expect(reconnect.disabled).toBe(true);
+});
+
 test("recovery does not unlock until the replacement PIN is used and Portuguese remains available", async () => {
   vi.mocked(api.accessStatus).mockResolvedValue({...status,locked:true,language:"pt-BR"});
   vi.mocked(api.recoverAccess).mockResolvedValue("NOVO-CODIGO-SINTETICO");
