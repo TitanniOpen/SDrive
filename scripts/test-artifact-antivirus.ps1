@@ -1,9 +1,9 @@
-param([string]$ScannerPath, [switch]$IncludeOffline)
+param([string]$ScannerPath)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $reportPath = Join-Path $projectRoot '.tools/check-results/artifact-antivirus.json'
 New-Item -ItemType Directory -Force -Path (Split-Path $reportPath -Parent) | Out-Null
-$report = [ordered]@{ status = 'failed'; time = [DateTime]::UtcNow.ToString('o'); signatureVersion = ''; artifacts = @(); error = '' }
+$report = [ordered]@{ status = 'failed'; time = [DateTime]::UtcNow.ToString('o'); signatureVersion = ''; engineVersion = ''; platformVersion = ''; scannerPath = ''; artifacts = @(); error = '' }
 try {
     if (!$ScannerPath) {
         $ScannerPath = Join-Path $env:ProgramData 'Microsoft/Windows Defender/Platform/CurrentVersion/MpCmdRun.exe'
@@ -12,17 +12,22 @@ try {
         }
     }
     if (!(Test-Path -LiteralPath $ScannerPath -PathType Leaf)) { throw 'Microsoft Defender scanner is unavailable; artifact verification is required.' }
+    $report.scannerPath = (Resolve-Path -LiteralPath $ScannerPath).Path
+    $ScannerPath = $report.scannerPath
     $status = Get-MpComputerStatus
     if (!$status.AntivirusEnabled -or !$status.RealTimeProtectionEnabled) { throw 'Microsoft Defender protection must be active for artifact verification.' }
     & $ScannerPath -SignatureUpdate | Out-Host
     if ($LASTEXITCODE) { throw 'Microsoft Defender signature update failed.' }
-    $report.signatureVersion = (Get-MpComputerStatus).AntivirusSignatureVersion
+    $updatedStatus = Get-MpComputerStatus
+    $report.signatureVersion = $updatedStatus.AntivirusSignatureVersion
+    $report.engineVersion = $updatedStatus.AMEngineVersion
+    $report.platformVersion = $updatedStatus.AMProductVersion
     if (!$report.signatureVersion) { throw 'Could not verify Microsoft Defender signature version.' }
     $version = (Get-Content -LiteralPath "$projectRoot/frontend/package.json" -Raw | ConvertFrom-Json).version
     if ($version -cnotmatch '^\d+\.\d+\.\d+$') { throw 'Artifact verification requires a stable three-part package version.' }
     # Scan unpacked payloads too: NSIS archive scans can miss a detected executable.
     $artifacts = @('SDrive.exe', 'SDrive-cleanup.exe', 'rclone.exe', "SDrive-$version-setup.exe")
-    if ($IncludeOffline) { $artifacts += "SDrive-$version-offline-setup.exe" }
+
     foreach ($name in $artifacts) {
         $file = Get-Item -LiteralPath (Join-Path $projectRoot "bin/$name")
         $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()

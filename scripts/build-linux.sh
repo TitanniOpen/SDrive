@@ -12,6 +12,7 @@ output="$PWD/bin/linux-amd64"
 mkdir -p "$output"
 (cd frontend && npm ci && npm run build)
 go test ./internal/core -run '^TestProductionURLLiteralsUseStructuredResources$' -count=1
+node --test scripts/check-help-links.test.mjs
 node scripts/engine-overlay.mjs --test
 go build -trimpath -tags production -ldflags '-s -w' -o "$output/SDrive" .
 node scripts/check-help-links.mjs "$output/SDrive"

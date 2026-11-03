@@ -1,4 +1,4 @@
-param([switch]$IncludeInstallers, [switch]$IncludeOffline)
+param([switch]$IncludeInstallers)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $version = (Get-Content -LiteralPath "$projectRoot/frontend/package.json" -Raw | ConvertFrom-Json).version
@@ -67,11 +67,11 @@ public static class SDriveResourceCheck {
 }
 $artifacts = @('SDrive.exe', 'SDrive-check.exe')
 if ($IncludeInstallers) { $artifacts += @("SDrive-$version-setup.exe") }
-if ($IncludeOffline) { $artifacts += "SDrive-$version-offline-setup.exe" }
+
 foreach ($artifact in $artifacts) {
     $path = Join-Path $projectRoot "bin/$artifact"
     $metadata = [Diagnostics.FileVersionInfo]::GetVersionInfo($path)
-    if ($metadata.FileVersion -cne $version -or $metadata.ProductVersion -cne $version -or $metadata.ProductName -cne 'SDrive') {
+    if ($metadata.FileVersion -cne $version -or $metadata.ProductVersion -cne $version -or $metadata.ProductName -cne 'SDrive' -or $metadata.LegalCopyright -cne 'Licensed under the GNU General Public License v3.0') {
         throw "Incorrect Windows version metadata: $artifact"
     }
     [SDriveResourceCheck]::CheckIcon($path, "$projectRoot/assets/sdrive.ico", $artifact -in @('SDrive.exe', 'SDrive-check.exe'))

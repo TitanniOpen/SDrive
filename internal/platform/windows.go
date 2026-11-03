@@ -116,9 +116,20 @@ func Key(dir string) (string, error) {
 	}
 	return text, nil
 }
-func DriveUsed(letter string) bool {
-	mask, err := windows.GetLogicalDrives()
-	return err != nil || mask&(1<<uint(letter[0]-'A')) != 0
+func DriveUsed(letter string) bool { return DriveUsage()(letter) }
+
+// DriveUsage captures one native drive mask for a group of checks.
+func DriveUsage() func(string) bool {
+	return driveUsage(windows.GetLogicalDrives())
+}
+
+func driveUsage(mask uint32, err error) func(string) bool {
+	return func(letter string) bool {
+		if err != nil || len(letter) != 1 || letter[0] < 'A' || letter[0] > 'Z' {
+			return true
+		}
+		return mask&(1<<uint(letter[0]-'A')) != 0
+	}
 }
 func FreeBytes(path string) (uint64, error) {
 	p, e := windows.UTF16PtrFromString(path)

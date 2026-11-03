@@ -9,18 +9,14 @@ Name "SDrive"
 !endif
 VIProductVersion "${APP_VERSION}.0"
 VIAddVersionKey /LANG=1033 "ProductName" "SDrive"
+VIAddVersionKey /LANG=1033 "LegalCopyright" "Licensed under the GNU General Public License v3.0"
 VIAddVersionKey /LANG=1033 "FileDescription" "SDrive installer"
 VIAddVersionKey /LANG=1033 "FileVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=1033 "ProductVersion" "${APP_VERSION}"
 !define MUI_ICON "..\assets\sdrive.ico"
 !define MUI_UNICON "..\assets\sdrive.ico"
-!ifdef OFFLINE
-  OutFile "..\bin\SDrive-${APP_VERSION}-offline-setup.exe"
-  !define MUI_WELCOMEPAGE_TEXT "$(WelcomeOffline)"
-!else
   OutFile "..\bin\SDrive-${APP_VERSION}-setup.exe"
   !define MUI_WELCOMEPAGE_TEXT "$(WelcomeOnline)"
-!endif
 InstallDir "$LOCALAPPDATA\Programs\SDrive"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -117,9 +113,6 @@ Function CheckRunning
 FunctionEnd
 
 !macro PrepareComponent ID FILE
-  !ifdef OFFLINE
-    File /oname=${FILE} "..\.tools\prerequisites\${FILE}"
-  !else
     retry_${ID}:
     nsExec::ExecToLog /TIMEOUT=120000 '"$PLUGINSDIR\prerequisites.exe" --download-prerequisite "${ID}" "$PLUGINSDIR"'
     Pop $0
@@ -128,7 +121,6 @@ FunctionEnd
       MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(DownloadFailed)" IDRETRY retry_${ID}
       Abort
     ${EndIf}
-  !endif
 !macroend
 
 Section "SDrive"

@@ -1,5 +1,4 @@
-param([switch]$Installer, [switch]$OfflineInstaller, [switch]$Check)
-if ($OfflineInstaller) { $Installer = $true }
+param([switch]$Installer, [switch]$Check)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
@@ -19,7 +18,7 @@ try {
     } finally { Pop-Location }
     if ($Check) {
         & "$PSScriptRoot/engine-overlay.ps1" -Test | Out-Host
-        node --test scripts/ui-smoke-runtime.test.mjs
+        node --test scripts/ui-smoke-runtime.test.mjs scripts/check-help-links.test.mjs
         if ($LASTEXITCODE) { throw 'Native smoke harness tests failed' }
         New-Item -ItemType Directory -Force -Path '.tools/check-results' | Out-Null
         & $go test -json ./... | Tee-Object -FilePath '.tools/check-results/go-tests.jsonl' | ForEach-Object {
@@ -41,8 +40,8 @@ try {
     node scripts/check-help-links.mjs bin/SDrive.exe bin/SDrive-check.exe
     if ($LASTEXITCODE) { throw 'Help URL boundary verification failed' }
     if ($Installer) {
-        & "$PSScriptRoot/package.ps1" -Offline:$OfflineInstaller
+        & "$PSScriptRoot/package.ps1"
     }
-    & "$PSScriptRoot/test-windows-resources.ps1" -IncludeInstallers:$Installer -IncludeOffline:$OfflineInstaller
+    & "$PSScriptRoot/test-windows-resources.ps1" -IncludeInstallers:$Installer
     Write-Output "Build ready at $projectRoot/bin"
 } finally { Pop-Location }

@@ -21,12 +21,6 @@ export async function prepareReleaseAssets(root, platform) {
     const packages = target === 'windows'
       ? [`SDrive-${version}-setup.exe`]
       : [`SDrive-${version}-linux-amd64.deb`, `SDrive-${version}-linux-amd64.tar.gz`];
-    if (target === 'windows') {
-      try {
-        const manifest = await readFile(path.join(directory, 'SHA256SUMS'), 'utf8');
-        if (manifest.split(/\r?\n/).some(line => line.trim().split(/\s+/, 2)[1] === `SDrive-${version}-offline-setup.exe`)) packages.push(`SDrive-${version}-offline-setup.exe`);
-      } catch (error) { if (error.code !== 'ENOENT') throw error; }
-    }
     const available = await Promise.all(packages.map(async name => {
       try { await access(path.join(directory, name)); return true; }
       catch (error) { if (error.code === 'ENOENT') return false; throw error; }

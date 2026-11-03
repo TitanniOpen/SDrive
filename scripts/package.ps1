@@ -1,4 +1,3 @@
-param([switch]$Offline)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
@@ -37,13 +36,8 @@ try {
     Compress-Archive -Path "$sourceStage/*" -DestinationPath 'bin/SDrive-source.zip' -Force
     & $compiler "/DAPP_VERSION=$version" /INPUTCHARSET UTF8 /V2 installer/sdrive.nsi
     if ($LASTEXITCODE) { throw 'Online installer compilation failed' }
-    if ($Offline) {
-        & $compiler /DOFFLINE "/DAPP_VERSION=$version" /INPUTCHARSET UTF8 /V2 installer/sdrive.nsi
-        if ($LASTEXITCODE) { throw 'Offline installer compilation failed' }
-    }
-    & "$PSScriptRoot/test-artifact-antivirus.ps1" -IncludeOffline:$Offline
+    & "$PSScriptRoot/test-artifact-antivirus.ps1"
     $artifacts = @('bin/SDrive.exe','bin/rclone.exe',"bin/SDrive-$version-setup.exe",'bin/SDrive-source.zip','bin/rclone-source.zip')
-    if ($Offline) { $artifacts += "bin/SDrive-$version-offline-setup.exe" }
     $hashLines = foreach ($artifact in $artifacts) { $hash = Get-FileHash -LiteralPath $artifact -Algorithm SHA256; "$($hash.Hash.ToLower())  $([IO.Path]::GetFileName($artifact))" }
     $hashLines | Set-Content -LiteralPath 'bin/SHA256SUMS' -Encoding utf8
     node scripts/release-assets.mjs windows

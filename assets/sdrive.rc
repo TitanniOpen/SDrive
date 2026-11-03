@@ -16,6 +16,7 @@ BEGIN
         BEGIN
             VALUE "FileDescription", "SDrive - Open source remote storage\0"
             VALUE "FileVersion", "@VERSION@\0"
+            VALUE "LegalCopyright", "Licensed under the GNU General Public License v3.0\0"
             VALUE "InternalName", "SDrive\0"
             VALUE "ProductName", "SDrive\0"
             VALUE "ProductVersion", "@VERSION@\0"

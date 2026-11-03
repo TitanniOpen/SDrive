@@ -165,9 +165,10 @@ func MountAvailable() bool {
 	file.Close()
 	return true
 }
-func DriveUsed(string) bool  { return true }
-func WinFspInstalled() bool  { return false }
-func WebViewInstalled() bool { return true }
+func DriveUsed(string) bool         { return true }
+func DriveUsage() func(string) bool { return DriveUsed }
+func WinFspInstalled() bool         { return false }
+func WebViewInstalled() bool        { return true }
 func PrerequisiteStatus() int {
 	if MountAvailable() {
 		return 0

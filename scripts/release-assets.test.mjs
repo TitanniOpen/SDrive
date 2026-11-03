@@ -18,7 +18,7 @@ async function fixture(t, platforms) {
     await mkdir(directory, { recursive: true });
     const packages = platform === 'linux'
       ? ['SDrive-1.2.3-linux-amd64.deb', 'SDrive-1.2.3-linux-amd64.tar.gz']
-      : ['SDrive-1.2.3-setup.exe', 'SDrive-1.2.3-offline-setup.exe'];
+      : ['SDrive-1.2.3-setup.exe'];
     const lines = [];
     for (const name of [...packages, 'SDrive-source.zip', 'rclone-source.zip']) {
       const content = name === 'rclone-source.zip' ? 'shared engine' : `${platform}/${name}`;
@@ -37,7 +37,7 @@ test('combines platforms, renames sources, removes stale files and hashes final 
   await writeFile(path.join(releases, 'old-setup.exe'), 'old');
   await prepareReleaseAssets(root, 'windows');
   assert.deepEqual((await readdir(releases)).sort(), [
-    'SDrive-1.2.3-setup.exe', 'SDrive-1.2.3-offline-setup.exe',
+    'SDrive-1.2.3-setup.exe',
     'SDrive-1.2.3-linux-amd64.deb', 'SDrive-1.2.3-linux-amd64.tar.gz',
     'SDrive-1.2.3-windows-source.zip', 'SDrive-1.2.3-linux-source.zip',
     'rclone-source.zip', 'SHA256SUMS',
@@ -47,14 +47,14 @@ test('combines platforms, renames sources, removes stale files and hashes final 
     assert.equal(hash(await readFile(path.join(releases, name))), expected);
   }
   await prepareReleaseAssets(root, 'linux');
-  assert.equal((await readdir(releases)).length, 8);
+  assert.equal((await readdir(releases)).length, 7);
 });
 
 for (const platform of ['windows', 'linux']) {
   test(`supports a standalone ${platform} build`, async t => {
     const root = await fixture(t, [platform]);
     const releases = await prepareReleaseAssets(root, platform);
-    assert.equal((await readdir(releases)).length, 5);
+    assert.equal((await readdir(releases)).length, platform === 'windows' ? 4 : 5);
   });
 }
 
@@ -75,8 +75,7 @@ test('rejects corrupt inputs, partial packages and differing shared sources with
 
 test('online-only Windows manifests omit stale offline packages from the release', async t => {
   const root = await fixture(t, ['windows']);
-  const manifest = path.join(root, 'bin/SHA256SUMS');
-  await writeFile(manifest, (await readFile(manifest, 'utf8')).split('\r\n').filter(line => !line.includes('offline-setup.exe')).join('\r\n'));
+  await writeFile(path.join(root, 'bin/SDrive-1.2.3-offline-setup.exe'), 'stale legacy package');
   const releases = await prepareReleaseAssets(root, 'windows');
   assert.deepEqual((await readdir(releases)).sort(), ['SDrive-1.2.3-setup.exe', 'SDrive-1.2.3-windows-source.zip', 'rclone-source.zip', 'SHA256SUMS'].sort());
 });

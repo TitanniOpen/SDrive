@@ -20,4 +20,4 @@ foreach ($item in $manifest) {
 $license = Join-Path $destination 'WinFsp-LICENSE.txt'
 if (!(Test-Path -LiteralPath $license)) { Invoke-WebRequest 'https://raw.githubusercontent.com/winfsp/winfsp/v2.1/License.txt' -OutFile $license }
 if ((Get-FileHash -LiteralPath $license -Algorithm SHA256).Hash -ne '68ae2fa9d8e6110ebdc9a236beecf118e279f8a26530daf09c9e682c231f7879') { throw 'Invalid WinFsp license' }
-Write-Output 'Componentes offline conferidos: SHA-256 e assinatura Authenticode.'
+Write-Output 'Prerequisite files verified: SHA-256 and Authenticode signatures.'

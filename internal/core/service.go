@@ -83,6 +83,7 @@ type Service struct {
 	autoStart            func(bool) error
 	mountAvailable       func() bool
 	driveUsed            func(string) bool
+	driveUsage           func() func(string) bool
 	engineError          string
 	mounted              map[string]bool
 	busy                 map[string]bool
@@ -113,7 +114,7 @@ type Service struct {
 
 func New(dir string, rpc RPC, engineError string) (*Service, error) {
 	store, loadErr := loadStore(dir)
-	s := &Service{dir: dir, store: store, rpc: rpc, engineError: engineError, autoStart: platform.AutoStart, mountAvailable: platform.MountAvailable, driveUsed: platform.DriveUsed, mounted: map[string]bool{}, busy: map[string]bool{}, operations: map[string]string{}, errors: map[string]string{}}
+	s := &Service{dir: dir, store: store, rpc: rpc, engineError: engineError, autoStart: platform.AutoStart, mountAvailable: platform.MountAvailable, driveUsed: platform.DriveUsed, driveUsage: platform.DriveUsage, mounted: map[string]bool{}, busy: map[string]bool{}, operations: map[string]string{}, errors: map[string]string{}}
 	if location, err := readCacheLocation(dir); err == nil {
 		s.cacheRoot = location.Path
 	} else if !os.IsNotExist(err) {
@@ -233,7 +234,7 @@ func (s *Service) Snapshot() (v View) {
 	snapshotID := s.snapshotID
 	rpc := s.rpc
 	_, backupErr := s.backupStore()
-	v = View{SettingsError: s.settingsError, BackupAvailable: backupErr == nil && !s.incompatibleSettings, RecoveryHold: s.recoveryHold, MaintenanceError: s.maintenanceError, StartupWarning: s.startupWarning, Providers: Catalog(), Connections: []ConnectionView{}, Settings: s.store.Settings, Letters: []string{}, WinFsp: s.mountAvailable(), EngineError: s.engineError}
+	v = View{SettingsError: s.settingsError, BackupAvailable: backupErr == nil && !s.incompatibleSettings, RecoveryHold: s.recoveryHold, MaintenanceError: s.maintenanceError, StartupWarning: s.startupWarning, Providers: Catalog(), Connections: []ConnectionView{}, Settings: s.store.Settings, Letters: []string{}, EngineError: s.engineError}
 	v.Platform, v.MountAvailable = platform.OS, s.mountAvailable()
 	v.WinFsp = platform.OS == "windows" && v.MountAvailable
 	v.CacheLocation = s.dataPath()
@@ -251,8 +252,12 @@ func (s *Service) Snapshot() (v View) {
 	for _, c := range s.store.Connections {
 		reserved[c.Letter] = true
 	}
+	driveUsed := s.driveUsed
+	if platform.OS == "windows" && s.driveUsage != nil {
+		driveUsed = s.driveUsage()
+	}
 	for letter := 'D'; letter <= 'Z'; letter++ {
-		if platform.OS == "windows" && !s.driveUsed(string(letter)) && !reserved[string(letter)] {
+		if platform.OS == "windows" && !driveUsed(string(letter)) && !reserved[string(letter)] {
 			v.Letters = append(v.Letters, string(letter))
 		}
 	}
