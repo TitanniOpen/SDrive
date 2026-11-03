@@ -161,37 +161,56 @@ try {
   assert.equal(await page.locator(".drive").count(), 1);
   await page.getByRole("button", { name: "Clear filters", exact: true }).click();
   assert.equal(await page.locator(".drive").count(), 3);
+  await page.locator(".drive-filter-group > summary").first().click();
+  await page.getByLabel("Connected", { exact: true }).check();
+  assert(await page.getByLabel("Connected", { exact: true }).evaluate(input => {
+    const selected = getComputedStyle(input.closest("label")).backgroundColor;
+    const other = getComputedStyle(input.closest("fieldset").querySelector("input:not(:checked)").closest("label")).backgroundColor;
+    return selected !== other;
+  }), "Selected filter options must have a distinct background");
+  await capture("dropdown-filter-soft-outline");
+  await page.getByLabel("Connected", { exact: true }).uncheck();
+  await page.locator(".drive-filter-group[open] > summary").press("Escape");
   for (const language of ["en", "pt-BR"]) {
     const catalog = language === "en" ? {} : JSON.parse(await readFile(path.join(root, "internal/i18n/pt-BR.json"), "utf8"));
     const t = source => catalog[source] || source;
     await page.evaluate(language => { window.visualSnapshot.settings.language = language; window.visualVisibility(false); window.visualVisibility(true); }, language);
     await page.waitForFunction(language => document.documentElement.lang === language, language);
-    for (const width of [1440, 1180, 850, 420]) {
+    for (const width of [1440, 1180, 850, 420, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const toggle = page.getByRole("button", { name: t("Filter drives"), exact: true });
       if (await toggle.getAttribute("aria-expanded") === "true") await toggle.click();
       await bounds();
       assert(await page.locator(".drive-filter-actions").evaluate(element => {
         const actions = element.getBoundingClientRect();
-        const slot = element.closest(".drive-toolbar-slot").getBoundingClientRect();
+        const slot = element.closest(".summary").getBoundingClientRect();
         const metrics = document.querySelector(".summary-metrics").getBoundingClientRect();
         const create = document.querySelector("main > header > .primary").getBoundingClientRect();
-        return Math.abs(actions.right - slot.right) <= 1 && Math.abs(actions.right - create.right) <= 1 && actions.left >= metrics.right && Math.abs(actions.top - metrics.top) <= 1;
+        const firstText = document.querySelector(".summary-metrics > div:first-child > span").getBoundingClientRect();
+        return Math.abs(actions.right - slot.right) <= 1 && Math.abs(actions.right - create.right) <= 1 && (innerWidth <= 650 ? actions.left >= firstText.right : actions.left >= metrics.right) && Math.abs(actions.top - metrics.top) <= 1;
       }), "Collapsed filters align with indicators at the far right");
+      const actionsBefore = await page.locator(".drive-filter-actions").boundingBox();
       await toggle.click();
       assert.equal(await page.getByRole("dialog").count(), 0, "Filters expand inline");
       await bounds();
+      const actionsAfter = await page.locator(".drive-filter-actions").boundingBox();
+      assert(Math.abs(actionsAfter.x - actionsBefore.x) < 1 && Math.abs(actionsAfter.y - actionsBefore.y) < 1, "Filter actions stay in place when expanded");
+      assert(await page.locator(".drive-filter-fields").evaluate(element => {
+        const fields = element.getBoundingClientRect(), summary = element.closest(".summary").getBoundingClientRect();
+        const metrics = document.querySelector(".summary-metrics").getBoundingClientRect();
+        return Math.abs(fields.left - summary.left) <= 1 && Math.abs(fields.right - summary.right) <= 1 && fields.top >= metrics.bottom;
+      }), "Expanded filters occupy the full row below the indicators");
       assert(await page.locator(".drive-filter-fields > *").evaluateAll(elements => elements.every(element => {
         const box = element.getBoundingClientRect();
-        const slot = element.closest(".drive-toolbar-slot").getBoundingClientRect();
+        const slot = element.closest(".summary").getBoundingClientRect();
         return box.left >= slot.left - 1 && box.right <= slot.right + 1;
-      })), "Expanded controls stay inside the region after pending uploads");
+      })), "Expanded controls stay inside the summary");
       await page.locator(".drive-filter-group > summary").first().click();
       await bounds();
       assert(await page.locator(".drive-filter-group[open] > fieldset").evaluate(element => {
-        const box = element.getBoundingClientRect(), slot = element.closest(".drive-toolbar-slot").getBoundingClientRect();
+        const box = element.getBoundingClientRect(), slot = element.closest(".summary").getBoundingClientRect();
         return box.left >= slot.left - 1 && box.right <= slot.right + 1;
-      }), "Dropdown options must not cross the indicators");
+      }), "Dropdown options stay inside the summary");
       await capture(`inline-filters-${language}-${width}`);
       await page.locator(".drive-filter-group[open] > summary").press("Escape");
       assert.equal(await page.locator(".drive-filter-group[open]").count(), 0);
@@ -826,6 +845,13 @@ try {
         if (width === 420) await page.locator(".dialog-navigation .navigation-toggle").click();
         await page.getByRole("tab", {name:t("Appearance"), exact:true}).click();
         assert.equal(await page.getByLabel(t("Theme"), {exact:true}).inputValue(), theme);
+        if (theme === "light" && language === "en" && width === 1440 && await page.evaluate(() => CSS.supports("appearance", "base-select"))) {
+          const themeSelect = page.getByLabel(t("Theme"), {exact:true});
+          assert.equal(await themeSelect.evaluate(element => getComputedStyle(element, "::picker(select)").appearance), "base-select");
+          await themeSelect.click();
+          await capture("dropdown-select-soft-outline");
+          await themeSelect.press("Escape");
+        }
         const settingSwitch = page.getByRole("switch", {name:t("Show service icons for drive letters"), exact:true});
         assert(await settingSwitch.evaluate(input => {
           const control = input.getBoundingClientRect(), label = input.closest("label").getBoundingClientRect();

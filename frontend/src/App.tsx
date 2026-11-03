@@ -365,24 +365,25 @@ function AppContent({ onLocked }: { onLocked: () => void }) {
           <div className="summary">
             <div className="summary-metrics">
               <div>
-                <strong>{data.connections.length}</strong> {t("connections")}
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a4 4 0 0 0 6 .5l3-3a4 4 0 0 0-5.7-5.7l-1.7 1.7M14 11a4 4 0 0 0-6-.5l-3 3a4 4 0 0 0 5.7 5.7l1.7-1.7" /></svg>
+                <span><strong>{data.connections.length}</strong><span>{t("connections")}</span></span>
               </div>
               <div>
-                <span className="dot" />
-                <strong>
-                  {data.connections.filter((c) => c.mounted).length}
-                </strong>{" "}
-                {t("connected")}
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></svg>
+                <span><strong>{data.connections.filter((c) => c.mounted).length}</strong><span>{t("connected")}</span></span>
               </div>
               <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-4 4 4-4 4 4M4 16v3h16v-3" /></svg>
+                <span>
                 <strong>
                   {data.connections.some((c) => c.pending === null)
                     ? t("{count} known; others unknown", {
                         count: data.connections.reduce((n, c) => n + (c.pending ?? 0), 0),
                       })
                     : data.connections.reduce((n, c) => n + (c.pending ?? 0), 0)}
-                </strong>{" "}
-                {t("pending uploads")}
+                </strong>
+                <span>{t("pending uploads")}</span>
+                </span>
               </div>
             </div>
             <div className="drive-toolbar-slot" ref={setDriveToolbar} />
