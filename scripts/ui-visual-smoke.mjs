@@ -187,11 +187,17 @@ try {
         const metrics = document.querySelector(".summary-metrics").getBoundingClientRect();
         const create = document.querySelector("main > header > .primary").getBoundingClientRect();
         const firstText = document.querySelector(".summary-metrics > div:first-child > span").getBoundingClientRect();
-        return Math.abs(actions.right - slot.right) <= 1 && Math.abs(actions.right - create.right) <= 1 && (innerWidth <= 650 ? actions.left >= firstText.right : actions.left >= metrics.right) && Math.abs(actions.top - metrics.top) <= 1;
+        const position = innerWidth <= 420 ? actions.top >= metrics.bottom : (innerWidth <= 650 ? actions.left >= firstText.right : actions.left >= metrics.right) && Math.abs(actions.top - metrics.top) <= 1;
+        return Math.abs(actions.right - slot.right) <= 1 && Math.abs(actions.right - create.right) <= 1 && position;
       }), "Collapsed filters align with indicators at the far right");
       const actionsBefore = await page.locator(".drive-filter-actions").boundingBox();
+      const closedBackground = await toggle.evaluate(element => getComputedStyle(element).backgroundColor);
       await toggle.click();
       assert.equal(await page.getByRole("dialog").count(), 0, "Filters expand inline");
+      assert.notEqual(await toggle.evaluate(element => getComputedStyle(element).backgroundColor), closedBackground, "Expanded filters have a visible button state");
+      await page.emulateMedia({ forcedColors: "active" });
+      assert(await toggle.evaluate(element => getComputedStyle(element).backgroundColor !== getComputedStyle(element).color), "Expanded filter icon remains visible in forced colors");
+      await page.emulateMedia({ forcedColors: "none" });
       await bounds();
       const actionsAfter = await page.locator(".drive-filter-actions").boundingBox();
       assert(Math.abs(actionsAfter.x - actionsBefore.x) < 1 && Math.abs(actionsAfter.y - actionsBefore.y) < 1, "Filter actions stay in place when expanded");

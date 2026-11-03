@@ -1,6 +1,8 @@
 .disconnect-overlay { box-sizing: border-box; height: 100vh; padding: calc(16px * var(--spacing-scale)); display: flex; flex-direction: column; gap: calc(12px * var(--spacing-scale)); border: 1px solid var(--border); background: var(--surface); font-size: calc(14px * var(--text-scale, 1)); }
 .disconnect-overlay header { display: flex; flex-direction: column; gap: calc(4px * var(--spacing-scale)); margin: 0; }
 .disconnect-overlay header span { color: var(--muted); }
+.disconnect-brand { display: flex; align-items: center; gap: 8px; }
+.disconnect-brand img { width: 24px; height: 24px; object-fit: contain; }
 .disconnect-rows { flex: 1; min-height: 0; overflow-y: auto; }
 .disconnect-row { display: flex; align-items: flex-start; gap: calc(12px * var(--spacing-scale)); padding: calc(8px * var(--spacing-scale)) 0; overflow-wrap: anywhere; }
 .disconnect-row p { margin: calc(4px * var(--spacing-scale)) 0 0; font-size: calc(13px * var(--text-scale, 1)); }
@@ -162,14 +164,14 @@ h1 { font-size: calc(29px * var(--text-scale, 1)); font-weight: 600; line-height
 p { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); line-height: 1.6; }
 main > header p { margin: 0; }
 .drive-credits { margin-top: auto; padding-top: calc(16px * var(--spacing-scale)); text-align: right; font-size: calc(11px * var(--text-scale, 1)); line-height: 1.5; color: var(--muted); }
-.summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: calc(16px * var(--spacing-scale)) calc(24px * var(--spacing-scale)); padding: calc(22px * var(--spacing-scale)) 0; color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); }
+.summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: calc(16px * var(--spacing-scale)) calc(24px * var(--spacing-scale)); padding: calc(22px * var(--spacing-scale)) 0; color: var(--muted); font-size: calc(15px * var(--text-scale, 1)); }
 .summary-metrics { display: flex; align-items: flex-start; flex-wrap: wrap; gap: calc(12px * var(--spacing-scale)) calc(20px * var(--spacing-scale)); min-width: 0; min-height: 44px; }
 .summary-metrics > div { display: flex; gap: calc(8px * var(--spacing-scale)); min-width: 0; overflow-wrap: anywhere; }
 .summary-metrics > div + div { border-left: 1px solid var(--border); padding-left: calc(20px * var(--spacing-scale)); }
-.summary-metrics svg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.summary-metrics svg { width: 24px; height: 24px; flex: 0 0 24px; fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .summary-metrics > div:nth-child(2) svg { stroke: var(--connected-text); }
 .summary-metrics > div > span { display: flex; flex-direction: column; min-width: 0; }
-.summary strong { font-size: calc(19px * var(--text-scale, 1)); font-weight: 600; line-height: 1.2; color: var(--strong); }
+.summary strong { font-size: calc(21px * var(--text-scale, 1)); font-weight: 600; line-height: 1.2; color: var(--strong); }
 .summary .drive-toolbar-slot, .summary .drive-list-toolbar { display: contents; }
 .drives { display: grid; gap: calc(12px * var(--spacing-scale)); }
 .drive {
@@ -507,7 +509,13 @@ legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padd
 .drive-filter-toggle { position: relative; width: 44px; padding: calc(10px * var(--spacing-scale)); }
 .drive-filter-toggle svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
 .drive-filter-toggle.active { color: var(--accent); border-color: currentColor; }
+.drive-filter-toggle[aria-expanded="true"] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .drive-filter-count { position: absolute; top: -5px; right: -5px; min-width: 17px; padding: 0 calc(3px * var(--spacing-scale)); border-radius: 10px; background: var(--accent); color: var(--on-accent); font-size: calc(10px * var(--text-scale, 1)); line-height: 17px; }
+.drive-filter-toggle[aria-expanded="true"] .drive-filter-count { background: var(--on-accent); color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+@media (forced-colors: active) {
+  .drive-filter-toggle[aria-expanded="true"] { background: Highlight; color: HighlightText; border-color: Highlight; }
+  .drive-filter-toggle[aria-expanded="true"] .drive-filter-count { background: Canvas; color: CanvasText; border: 1px solid CanvasText; }
+}
 .drive-filter-fields { grid-column: 1; grid-row: 1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: calc(8px * var(--spacing-scale)); min-width: 0; animation: filter-enter 160ms ease-out; }
 .summary .drive-filter-fields { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
 @media (max-width: 650px) {
@@ -519,7 +527,10 @@ legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padd
   .summary .drive-filter-fields { grid-area: 2 / 1; }
 }
 @media (max-width: 420px) {
+  .summary-metrics > div:first-child { padding-right: 0; }
   .summary-metrics > div:last-child { grid-column: 1 / -1; border-left: 0; padding-left: 0; }
+  .summary .drive-filter-actions { grid-area: 2 / 1; }
+  .summary .drive-filter-fields { grid-area: 3 / 1; }
 }
 .drive-filter-fields > input, .drive-filter-group { flex: 1 1 140px; min-width: 0; max-width: 220px; width: 100%; }
 .drive-filter-fields > input { margin: 0; min-height: 44px; }
@@ -560,7 +571,7 @@ legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padd
 .brand { display: block; min-width: 0; flex: 1; margin: 0; }
 .brand-title { display: flex; align-items: center; gap: 8px; }
 .brand .logo { width: 30px; height: 30px; }
-.brand small { font-size: calc(8px * var(--text-scale, 1)); letter-spacing: .2px; white-space: nowrap; }
+.brand small { font-size: calc(11px * var(--text-scale, 1)); letter-spacing: .2px; }
 .sidebar-toggle { width: 44px; min-height: 44px; padding: 10px; margin: 0 -8px 0 0; flex-shrink: 0; background: transparent; border-color: transparent; }
 .sidebar-toggle svg, .nav-icon svg { display: block; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .nav-icon { display: inline-grid; place-items: center; width: 24px; flex-shrink: 0; margin-right: 8px; }

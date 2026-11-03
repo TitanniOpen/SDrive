@@ -2651,7 +2651,7 @@ test("Linux uses folder destinations without a missing-drive-letter warning", as
  vi.mocked(api.accessStatus).mockResolvedValue({ ...access, platform: "linux", globalIdle: false });
  vi.mocked(api.snapshot).mockResolvedValue({ ...snapshot, platform: "linux", mountAvailable: true, winFsp: false, letters: [], connections: [], cacheLocation: "/home/synthetic/.local/share/SDrive/cache" });
  render(<App />);
- await screen.findByText("Your cloud files, right in your file manager.");
+ await screen.findByRole("heading", { name: "My drives" });
  expect(screen.queryByText("No drive letters are available. Choose a new local subfolder or free a drive letter.")).toBeNull();
  expect(screen.queryByText("Required components unavailable")).toBeNull();
  const create = screen.getByRole("button", { name: "+ New connection" });

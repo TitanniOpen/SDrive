@@ -236,7 +236,6 @@ function AppContent({ onLocked }: { onLocked: () => void }) {
           <div>
             <div className="eyebrow">{t("CONNECTED STORAGE")}</div>
             <h1>{t("My drives")}</h1>
-            <p>{t("Your cloud files, right in Explorer.")}</p>
           </div>
           <button
             className="primary"

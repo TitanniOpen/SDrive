@@ -4,6 +4,7 @@ import { Events } from "@wailsio/runtime";
 import { LanguageProvider, isLanguage, useLanguage } from "./i18n";
 import { ThemeProvider, useTheme, type Theme } from "./theme";
 import { Spinner } from "./Spinner";
+import appLogo from "../../assets/sdrive.png";
 
 const stages = {
   checkingUploads: "Checking pending uploads…",
@@ -46,7 +47,7 @@ function DisconnectStatus() {
   const active = view?.rows.some(row => row.stage !== "failed" && row.stage !== "succeeded");
   const failed = view?.rows.some(row => row.stage === "failed");
   return <section className="disconnect-overlay" aria-label={t("Drive disconnection")}>
-    <header><strong>SDrive</strong><span>{t(active ? "Disconnecting drives…" : failed ? "Attention required" : "Disconnection complete")}</span></header>
+    <header><div className="disconnect-brand"><img src={appLogo} alt="" /><strong>SDrive</strong></div><span>{t(active ? "Disconnecting drives…" : failed ? "Attention required" : "Disconnection complete")}</span></header>
     <div className="disconnect-rows" role="status" aria-live="polite" aria-atomic="true" tabIndex={0}>
       {view?.rows.map((row, index) => <div className={`disconnect-row ${row.stage}`} key={index}>
         <span className="disconnect-indicator" aria-hidden="true">{row.stage === "succeeded" ? "✓" : row.stage === "failed" ? "!" : <Spinner />}</span>

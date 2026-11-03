@@ -4,7 +4,7 @@
 
 # SDrive
 
-**Your cloud files, right in your file manager.**
+**Access All. Share Nothing.**
 
 SDrive brings cloud storage and remote servers into your everyday workflow. Connect them as local drives or folders, then open, edit and save files with the applications you already use, without downloading everything first.
 

@@ -22,6 +22,7 @@ function publish(revision: number, rows: DisconnectView["rows"], language = "en"
 
 test("subscribes before requesting initial progress and ignores stale updates", () => {
   const view = render(<DisconnectOverlay />);
+  expect(view.container.querySelector(".disconnect-brand img")?.getAttribute("src")).toContain("sdrive.png");
   expect(Events.On).toHaveBeenCalledWith("disconnect:state", expect.any(Function));
   expect(Events.Emit).toHaveBeenCalledWith("disconnect:ready");
   expect(vi.mocked(Events.On).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(Events.Emit).mock.invocationCallOrder[0]);
