@@ -83,7 +83,7 @@ type Results = {
   browsers: Browser[]; proxy: ProxyConfig; saveProxy: void;
   about: AboutInfo; diagnostics: string; desktopVisible: boolean; snapshot: Snapshot;
   begin: string; status: Session; answer: void; end: void; folders: typeof samples.folders;
-  confirm: string; selectFile: string; mount: void; unmount: void; test: void; remove: void;
+  confirm: string; selectFile: string; mount: void; unmount: void; preserveAndDisconnect: void; resolveCacheRecovery: void; test: void; remove: void;
   update: void; fields: { values: Record<string, string>; transport: string }; settings: void;
   open: void; prerequisite: void; probe: typeof samples.identity; exit: void; restart: void;
   restoreSettings: void; verifyRecovery: void; retryCleanup: void;
@@ -99,7 +99,7 @@ const calls = {
   about: [], diagnostics: [], desktopVisible: [], snapshot: [],
   begin: [samples.configInput], status: ["session"], answer: ["session", "answer"], end: ["session"],
   folders: ["session", "folder"], confirm: ["session", "folder", { letter: "S", folder: "", mode: "" }], selectFile: ["service_account_file"],
-  mount: ["connection"], unmount: ["connection"], test: ["connection"], remove: ["connection"],
+  mount: ["connection"], unmount: ["connection"], preserveAndDisconnect: ["connection"], resolveCacheRecovery: ["connection"], test: ["connection"], remove: ["connection"],
   update: [samples.configInput.connection], fields: ["connection"],
   settings: [{ ...filled.settings, density: "balanced", theme: "system", language: "en" }], open: ["connection"], prerequisite: ["winfsp"],
   probe: ["example.test", "22"], exit: [], restart: [], restoreSettings: [], verifyRecovery: [], retryCleanup: [],

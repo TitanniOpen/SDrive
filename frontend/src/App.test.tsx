@@ -95,7 +95,7 @@ vi.mock("./api", async (importOriginal) => ({
     test: vi.fn(),
     update: vi.fn(),
     updateDriveAppearance: vi.fn(),
-    unmount: vi.fn(),
+    resolveCacheRecovery: vi.fn(async () => undefined), preserveAndDisconnect: vi.fn(async () => undefined), unmount: vi.fn(),
     open: vi.fn(),
     fields: vi.fn(),
     selectFile: vi.fn(),

@@ -19,6 +19,7 @@ func bridgeSamples() map[string]any {
 	field := Field{Key: "host", Label: "Server", Required: true, Choices: []string{"example.test"}, Hint: "Server hostname"}
 	provider := Provider{ID: "sftp", Name: "SFTP", Backend: "sftp", Fields: []Field{field}, Available: true, Notice: "Synthetic provider"}
 	question := Question{Name: "Library", Help: "Choose a library", Examples: []Example{{Value: "library", Help: "User library"}}}
+	connection.DisableFileCache = true
 	input := ConfigInput{Connection: connection, Values: map[string]string{"host": "example.test"}, Guided: true, ForgetCredentials: true, ImportDraftID: "draft"}
 	message := i18n.NewMessage("drive.letter_in_use", map[string]string{"letter": "S"})
 	count, size, pending := 2, uint64(1024), int64(512)
@@ -28,12 +29,12 @@ func bridgeSamples() map[string]any {
 	filled.Providers = []Provider{provider}
 	filled.Letters = []string{"T"}
 	filled.FreeBytes = &size
-	filled.Connections = []ConnectionView{{ServerPath: "example.test/folder", Connection: connection, Pending: &count, Operation: "mounting", Error: message.Message, ErrorMessage: message, Uploads: &UploadView{Active: 1, Queued: 1}, Cache: CacheView{CheckedAt: &checked, PendingBytes: &pending, UsedBytes: &size}}}
+	filled.Connections = []ConnectionView{{ServerPath: "example.test/folder", Connection: connection, Pending: &count, Operation: "mounting", Error: message.Message, ErrorMessage: message, Uploads: &UploadView{Active: 1, Queued: 1}, Cache: CacheView{RecoveryPath: "synthetic-recovery", Issues: []CacheIssue{{Code: "missing_metadata", Path: "example.tmp"}}, IssueCount: 1, CheckedAt: &checked, PendingBytes: &pending, UsedBytes: &size}}}
 	return map[string]any{
 		"accessStatus":  AccessStatus{Theme: "system", Enabled: true, Locked: true, Language: "en", Policy: AccessPolicy{IdleMinutes: 15}, RetryAt: checked},
 		"fileAccess":    FileAccessView{Path: "document.txt", FileAccess: platform.FileAccess{State: "reported", CheckedAt: checked, Processes: []platform.FileProcess{{PID: 42, Name: "Synthetic editor", StartedAt: checked}}}},
 		"importPreview": ImportPreview{ID: "preview", Document: PortableFile{Format: "sdrive-portable", Version: 2, Connections: []PortableConnection{portableDefinition(connection)}, Preferences: portablePreferences(settings)}},
-		"importDraft":   ImportDraft{ID: "draft", Definition: portableDefinition(connection)},
+		"importDraft":   ImportDraft{ID: "draft", Definition: func() PortableConnection { d := portableDefinition(connection); d.DisableFileCache = true; return d }()},
 		"mountTarget":   mountTarget(connection),
 		"snapshotEmpty": empty, "snapshotFilled": filled,
 		"connectionUnknown": ConnectionView{Connection: Connection{ID: "connection", Remote: "remote", Name: "Café 😀", Provider: "sftp", Path: "folder", Letter: "S"}},
@@ -62,7 +63,7 @@ func bridgeMethods() map[string]any {
 		"about": "About", "diagnostics": "Diagnostics", "desktopVisible": "DesktopVisible", "snapshot": "Snapshot",
 		"begin": "BeginConfig", "status": "ConfigStatus", "answer": "AnswerConfig", "end": "EndConfig",
 		"folders": "ListConfigFolders", "confirm": "ConfirmConfig", "selectFile": "SelectCredentialFile",
-		"mount": "Mount", "unmount": "Unmount", "test": "TestConnection", "remove": "Remove",
+		"resolveCacheRecovery": "ResolveCacheRecovery", "preserveAndDisconnect": "PreserveAndDisconnect", "mount": "Mount", "unmount": "Unmount", "test": "TestConnection", "remove": "Remove",
 		"update": "UpdateConnection", "fields": "ConnectionFields", "settings": "SaveSettings", "open": "OpenMount",
 		"prerequisite": "Prerequisite", "probe": "ProbeSSH", "exit": "Exit", "restart": "RestartEngine",
 		"restoreSettings": "RestoreSettings", "verifyRecovery": "VerifyRecovery", "retryCleanup": "RetryCleanup",

@@ -88,6 +88,9 @@ func (w *logWriter) record(data []byte) {
 		if strings.Contains(strings.ToLower(record.Msg), "failed to load config file") {
 			kind = "configuration"
 		}
+		if strings.Contains(record.Msg, "File.Rename failed in Cache:") {
+			kind = "cache_rename"
+		}
 		w.e.logSignal(kind)
 	}
 }

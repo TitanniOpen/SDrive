@@ -19,6 +19,7 @@ const portableLimit = 4 << 20
 
 // Portable definitions deliberately have no credential or recovery fields.
 type PortableConnection struct {
+	DisableFileCache      bool              `json:"disableFileCache,omitempty"`
 	HiddenFileVisibility  string            `json:"hiddenFileVisibility,omitempty"`
 	OpenMountAfterConnect bool              `json:"openExplorerAfterConnect,omitempty"`
 	CardStyle             string            `json:"cardStyle,omitempty"`
@@ -88,11 +89,11 @@ type ImportPreview struct {
 }
 
 func (d PortableConnection) connection() Connection {
-	return Connection{HiddenFileVisibility: d.HiddenFileVisibility, OpenMountAfterConnect: d.OpenMountAfterConnect, CardStyle: d.CardStyle, IconImage: d.IconImage, Name: d.Name, Provider: d.Provider, Path: d.Path, Letter: d.Letter, MountMode: d.MountMode, MountFolder: d.MountFolder, DirectoryCacheSeconds: d.DirectoryCacheSeconds, VirtualCapacityGiB: d.VirtualCapacityGiB, ReadOnly: d.ReadOnly, AutoMount: d.AutoMount, AuthMethod: d.AuthMethod, SessionOnly: d.SessionOnly, UploadLimit: d.UploadLimit, DownloadLimit: d.DownloadLimit, UseProxy: d.UseProxy, Browser: d.Browser, PrivateBrowser: d.PrivateBrowser, ConnectTimeout: d.ConnectTimeout, IdleTimeout: d.IdleTimeout, AlternateURL: d.AlternateURL}
+	return Connection{DisableFileCache: d.DisableFileCache, HiddenFileVisibility: d.HiddenFileVisibility, OpenMountAfterConnect: d.OpenMountAfterConnect, CardStyle: d.CardStyle, IconImage: d.IconImage, Name: d.Name, Provider: d.Provider, Path: d.Path, Letter: d.Letter, MountMode: d.MountMode, MountFolder: d.MountFolder, DirectoryCacheSeconds: d.DirectoryCacheSeconds, VirtualCapacityGiB: d.VirtualCapacityGiB, ReadOnly: d.ReadOnly, AutoMount: d.AutoMount, AuthMethod: d.AuthMethod, SessionOnly: d.SessionOnly, UploadLimit: d.UploadLimit, DownloadLimit: d.DownloadLimit, UseProxy: d.UseProxy, Browser: d.Browser, PrivateBrowser: d.PrivateBrowser, ConnectTimeout: d.ConnectTimeout, IdleTimeout: d.IdleTimeout, AlternateURL: d.AlternateURL}
 }
 
 func portableDefinition(c Connection) PortableConnection {
-	return PortableConnection{HiddenFileVisibility: c.HiddenFileVisibility, OpenMountAfterConnect: c.OpenMountAfterConnect, CardStyle: c.CardStyle, IconImage: c.IconImage, Name: c.Name, Provider: c.Provider, Path: c.Path, Letter: c.Letter, MountMode: c.MountMode, MountFolder: c.MountFolder, DirectoryCacheSeconds: c.DirectoryCacheSeconds, VirtualCapacityGiB: c.VirtualCapacityGiB, ReadOnly: c.ReadOnly, AutoMount: c.AutoMount, AuthMethod: c.AuthMethod, SessionOnly: c.SessionOnly, UploadLimit: c.UploadLimit, DownloadLimit: c.DownloadLimit, UseProxy: c.UseProxy, Browser: c.Browser, PrivateBrowser: c.PrivateBrowser, ConnectTimeout: c.ConnectTimeout, IdleTimeout: c.IdleTimeout, AlternateURL: c.AlternateURL, Values: map[string]string{}}
+	return PortableConnection{DisableFileCache: c.DisableFileCache, HiddenFileVisibility: c.HiddenFileVisibility, OpenMountAfterConnect: c.OpenMountAfterConnect, CardStyle: c.CardStyle, IconImage: c.IconImage, Name: c.Name, Provider: c.Provider, Path: c.Path, Letter: c.Letter, MountMode: c.MountMode, MountFolder: c.MountFolder, DirectoryCacheSeconds: c.DirectoryCacheSeconds, VirtualCapacityGiB: c.VirtualCapacityGiB, ReadOnly: c.ReadOnly, AutoMount: c.AutoMount, AuthMethod: c.AuthMethod, SessionOnly: c.SessionOnly, UploadLimit: c.UploadLimit, DownloadLimit: c.DownloadLimit, UseProxy: c.UseProxy, Browser: c.Browser, PrivateBrowser: c.PrivateBrowser, ConnectTimeout: c.ConnectTimeout, IdleTimeout: c.IdleTimeout, AlternateURL: c.AlternateURL, Values: map[string]string{}}
 }
 
 func portablePreferences(settings Settings) PortablePreferences {
@@ -213,7 +214,7 @@ func validatePortableMountTarget(c Connection) error {
 
 func validatePortableDocument(d PortableFile) error {
 	b, err := json.Marshal(d)
-	if err != nil || len(b) > portableLimit || d.Format != "sdrive-portable" || d.Version != 2 || d.Connections == nil || len(d.Connections) > 1000 {
+	if err != nil || len(b) > portableLimit || d.Format != "sdrive-portable" || (d.Version != 2 && d.Version != 3) || d.Connections == nil || len(d.Connections) > 1000 {
 		return fmt.Errorf("Unsupported or invalid portable configuration.")
 	}
 	s := d.Preferences.settings(defaultStore().Settings)
@@ -300,7 +301,7 @@ func (s *Service) ExportConfiguration() error {
 	}
 	connections := append([]Connection{}, s.store.Connections...)
 	drafts := append([]ImportDraft{}, s.store.ImportDrafts...)
-	d := PortableFile{Format: "sdrive-portable", Version: 2, Connections: []PortableConnection{}, Preferences: portablePreferences(s.store.Settings)}
+	d := PortableFile{Format: "sdrive-portable", Version: 3, Connections: []PortableConnection{}, Preferences: portablePreferences(s.store.Settings)}
 	pick := s.pickPortable
 	s.mu.Unlock()
 	if pick == nil {

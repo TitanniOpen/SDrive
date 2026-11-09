@@ -1,0 +1,30 @@
+import { afterEach, beforeAll, expect, test, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { CachePreservation } from "./CachePreservation";
+import { api, type ConnectionView } from "./api";
+import fixtures from "./bridge-fixtures.json";
+vi.mock("./api",()=>({api:{preserveAndDisconnect:vi.fn().mockResolvedValue(undefined),resolveCacheRecovery:vi.fn().mockResolvedValue(undefined),open:vi.fn().mockResolvedValue(undefined)}}));
+beforeAll(()=>{HTMLDialogElement.prototype.showModal=function(){this.open=true};HTMLDialogElement.prototype.close=function(){this.open=false}});
+afterEach(()=>{cleanup();vi.clearAllMocks()});
+const connection:ConnectionView={...fixtures.samples.snapshotFilled.connections[0],mounted:false,recovery:true,operation:"",cache:{...fixtures.samples.snapshotFilled.connections[0].cache,recoveryPath:"recovery/example"}};
+test("preservation requires confirmation and cancel performs no write",async()=>{
+ render(<CachePreservation connection={connection}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Preserve and disconnect"}));
+ expect(screen.getByRole("dialog").parentElement).toBe(document.body);
+ expect(screen.getByRole("dialog").textContent).toContain("does not confirm that they were uploaded");
+ fireEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"Cancel"}));
+ expect(api.preserveAndDisconnect).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole("button",{name:"Preserve and disconnect"}));
+ fireEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"Preserve and disconnect"}));
+ await waitFor(()=>expect(api.preserveAndDisconnect).toHaveBeenCalledWith(connection.id));
+});
+test("fresh cache requires its own confirmation and keeps recovery failure visible",async()=>{
+ vi.mocked(api.resolveCacheRecovery).mockRejectedValueOnce(new Error("The original cache changed."));
+ render(<CachePreservation connection={connection}/>);
+ fireEvent.click(screen.getByRole("button",{name:"Start with a fresh cache"}));
+ expect(api.resolveCacheRecovery).not.toHaveBeenCalled();
+ expect(screen.getByRole("dialog").textContent).toContain("preserved copies will remain");
+ fireEvent.click(within(screen.getByRole("dialog")).getByRole("button",{name:"Start with a fresh cache"}));
+ await waitFor(()=>expect(screen.getByRole("alert").textContent).toContain("original cache changed"));
+ expect(api.preserveAndDisconnect).not.toHaveBeenCalled();
+});

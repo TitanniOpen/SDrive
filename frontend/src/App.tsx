@@ -8,6 +8,7 @@ import { errorMessage as message, type LocalizedMessage } from "./messages";
 import { DiagnosticReport } from "./DiagnosticReport";
 import { DriveList } from "./DriveList";
 import { DriveDiagnostics } from "./DriveDiagnostics";
+import { CachePreservation } from "./CachePreservation";
 import { DriveDetails, type DriveDetailSelection } from "./DriveDetails";
 import { formatBytes as bytes } from "./formatBytes";
 import { AccessBoundary, AccessSettings } from "./AccessProtection";
@@ -686,6 +687,7 @@ function Drive({
           }}>
             <button disabled={busy} onClick={() => { closeMenu(); setAppearance(true); }}>{t("Customize appearance")}</button>
             <button onClick={() => { closeMenu(); onDetailSelect(undefined); setDiagnostics(true); }}>{t("Drive diagnostics")}</button>
+            {(c.cache.error || c.cache.recoveryPath) && <CachePreservation connection={c} disabled={busy} />}
             <button
               disabled={busy || c.mounted || c.recovery}
               className="danger"

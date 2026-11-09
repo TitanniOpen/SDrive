@@ -36,6 +36,15 @@ func TestPendingCombinesLiveAndDurableUploads(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(root, "file"), []byte(tc.metadata), 0600); err != nil {
 				t.Fatal(err)
 			}
+			if tc.metadata == `{"Dirty":true}` {
+				path := filepath.Join(s.dataPath(), "vfs", "sd_"+c.Remote, "nested", "file")
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(path, []byte("pending"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
 			got, err := s.pending(context.Background(), c)
 			if (err != nil) != tc.wantError || got != tc.want {
 				t.Fatalf("pending = %d, %v; want %d, error %v", got, err, tc.want, tc.wantError)

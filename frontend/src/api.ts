@@ -58,6 +58,7 @@ export interface Connection extends DriveAppearance {
   mountMode?: string;
   mountFolder?: string;
   directoryCacheSeconds?: number;
+  disableFileCache?: boolean;
   virtualCapacityGiB?: number;
   readOnly: boolean;
   autoMount: boolean;
@@ -87,6 +88,9 @@ export interface ConnectionView extends Connection {
   pending: number | null;
   uploads: { active: number; queued: number; cacheErrors: number } | null;
   cache: {
+    recoveryPath?: string;
+    issues?: { code: string; path: string }[];
+    issueCount?: number;
     checkedAt: string | null;
     pendingBytes: number | null;
     usedBytes: number | null;
@@ -243,6 +247,8 @@ export const api = {
     invoke<string>("ConfirmConfig", id, path, target),
   selectFile: (kind: string) => invoke<string>("SelectCredentialFile", kind),
   mount: (id: string) => invoke<void>("Mount", id),
+  resolveCacheRecovery: (id: string) => invoke<void>("ResolveCacheRecovery", id),
+  preserveAndDisconnect: (id: string) => invoke<void>("PreserveAndDisconnect", id),
   unmount: (id: string) => invoke<void>("Unmount", id),
   test: (id: string) => invoke<void>("TestConnection", id),
   remove: (id: string) => invoke<void>("Remove", id),

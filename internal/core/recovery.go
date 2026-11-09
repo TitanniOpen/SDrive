@@ -53,7 +53,7 @@ func (s *Service) cacheRemotes() (map[string]bool, error) {
 	} else if err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("could not inspect recovery cache; preserve the data directory")
 	}
-	for _, kind := range []string{"vfs", "vfsMeta"} {
+	for _, kind := range []string{"vfs", "vfsMeta", "sdrive-renames"} {
 		root := filepath.Join(s.dataPath(), kind)
 		if info, err := os.Lstat(root); err == nil && (!info.IsDir() || info.Mode()&os.ModeSymlink != 0) {
 			return nil, fmt.Errorf("unexpected recovery cache entry; preserve the data directory")
@@ -70,6 +70,15 @@ func (s *Service) cacheRemotes() (map[string]bool, error) {
 		for _, entry := range entries {
 			if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
 				return nil, fmt.Errorf("unexpected recovery cache entry; preserve the data directory")
+			}
+			if kind == "sdrive-renames" {
+				children, e := os.ReadDir(filepath.Join(root, entry.Name()))
+				if e != nil {
+					return nil, e
+				}
+				if len(children) == 0 {
+					continue
+				}
 			}
 			remotes[entry.Name()] = true
 		}

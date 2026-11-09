@@ -225,6 +225,15 @@
         "error"
       ]
     },
+    "preserveAndDisconnect": {
+      "args": [
+        "string"
+      ],
+      "name": "PreserveAndDisconnect",
+      "returns": [
+        "error"
+      ]
+    },
     "previewImport": {
       "args": [],
       "name": "PreviewImport",
@@ -433,6 +442,15 @@
       "returns": [
         "error"
       ]
+    },
+    "resolveCacheRecovery": {
+      "name": "ResolveCacheRecovery",
+      "args": [
+        "string"
+      ],
+      "returns": [
+        "error"
+      ]
     }
   },
   "samples": {
@@ -467,13 +485,14 @@
     "configInput": {
       "importDraftID": "draft",
       "connection": {
+        "disableFileCache": true,
         "hiddenFileVisibility": "system",
         "openExplorerAfterConnect": true,
         "cardStyle": "blue",
         "iconImage": "data:image/png;base64,synthetic",
         "id": "connection",
         "remote": "remote",
-        "name": "Caf\u00e9 \ud83d\ude00",
+        "name": "Café 😀",
         "provider": "sftp",
         "path": "folder",
         "letter": "S",
@@ -511,7 +530,7 @@
     "connectionUnknown": {
       "id": "connection",
       "remote": "remote",
-      "name": "Caf\u00e9 \ud83d\ude00",
+      "name": "Café 😀",
       "provider": "sftp",
       "path": "folder",
       "letter": "S",
@@ -606,11 +625,12 @@
     "importDraft": {
       "id": "draft",
       "definition": {
+        "disableFileCache": true,
         "hiddenFileVisibility": "system",
         "openExplorerAfterConnect": true,
         "cardStyle": "blue",
         "iconImage": "data:image/png;base64,synthetic",
-        "name": "Caf\u00e9 \ud83d\ude00",
+        "name": "Café 😀",
         "provider": "sftp",
         "path": "folder",
         "letter": "S",
@@ -641,11 +661,12 @@
         "version": 2,
         "connections": [
           {
+            "disableFileCache": true,
             "hiddenFileVisibility": "system",
             "openExplorerAfterConnect": true,
             "cardStyle": "blue",
             "iconImage": "data:image/png;base64,synthetic",
-            "name": "Caf\u00e9 \ud83d\ude00",
+            "name": "Café 😀",
             "provider": "sftp",
             "path": "folder",
             "letter": "S",
@@ -670,13 +691,13 @@
           }
         ],
         "preferences": {
+          "density": "balanced",
           "theme": "system",
           "language": "en",
           "cacheGiB": 2,
           "cacheMaxAgeHours": 24,
           "writeBackSeconds": 5,
-          "showServiceIcons": false,
-          "density": "balanced"
+          "showServiceIcons": false
         }
       }
     },
@@ -773,14 +794,14 @@
       "providers": [],
       "connections": [],
       "settings": {
+        "density": "balanced",
         "theme": "system",
         "showServiceIcons": false,
         "language": "en",
         "autoStart": false,
         "cacheGiB": 2,
         "cacheMaxAgeHours": 24,
-        "writeBackSeconds": 5,
-        "density": "balanced"
+        "writeBackSeconds": 5
       },
       "letters": [],
       "winFsp": false,
@@ -844,13 +865,14 @@
       ],
       "connections": [
         {
+          "disableFileCache": true,
           "hiddenFileVisibility": "system",
           "openExplorerAfterConnect": true,
           "cardStyle": "blue",
           "iconImage": "data:image/png;base64,synthetic",
           "id": "connection",
           "remote": "remote",
-          "name": "Caf\u00e9 \ud83d\ude00",
+          "name": "Café 😀",
           "provider": "sftp",
           "path": "folder",
           "letter": "S",
@@ -900,10 +922,18 @@
             "cacheErrors": 0
           },
           "cache": {
+            "recoveryPath": "synthetic-recovery",
             "checkedAt": "2026-01-01T00:00:00Z",
             "pendingBytes": 512,
             "usedBytes": 1024,
-            "error": ""
+            "error": "",
+            "issues": [
+              {
+                "code": "missing_metadata",
+                "path": "example.tmp"
+              }
+            ],
+            "issueCount": 1
           },
           "capacity": {
             "total": null,
@@ -925,14 +955,14 @@
         }
       ],
       "settings": {
+        "density": "balanced",
         "theme": "system",
         "showServiceIcons": false,
         "language": "en",
         "autoStart": false,
         "cacheGiB": 2,
         "cacheMaxAgeHours": 24,
-        "writeBackSeconds": 5,
-        "density": "balanced"
+        "writeBackSeconds": 5
       },
       "letters": [
         "T"

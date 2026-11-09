@@ -47,7 +47,7 @@ func valid(e Event) bool {
 	return err == nil && t.UTC().Format(time.RFC3339Nano) == e.Time &&
 		allowed(e.Stage, "application|profile|engine_find|key|engine_init|engine_start|engine_auth|engine_log|engine_exit|engine_rpc|setup|mount|unmount|cache|recovery|exit") &&
 		allowed(e.Result, "started|ok|failed|requested|forced|unexpected|signal") &&
-		allowed(e.Kind, "none|unknown|network|credentials|permission|engine|invalid|configuration|log_read|log_invalid|log_oversized") &&
+		allowed(e.Kind, "none|unknown|network|credentials|permission|engine|invalid|configuration|log_read|log_invalid|log_oversized|cache_rename") &&
 		(e.ExitCode == nil || (e.Stage == "engine_exit" && *e.ExitCode >= -1 && *e.ExitCode <= 1<<32-1))
 }
 

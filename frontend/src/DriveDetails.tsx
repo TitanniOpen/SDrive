@@ -50,7 +50,7 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
   const uploadErrors = !!c.uploads?.cacheErrors;
   const transfersVisible = c.pending === null || c.pending > 0 || !!c.uploads?.active || !!c.uploads?.queued || uploadErrors;
   const cacheVisible = c.mounted || needsRecovery || c.pending === null || c.pending > 0 || !!c.cache.usedBytes || !!c.cache.pendingBytes || !!c.cache.error;
-  const cacheUnknown = !c.cache.checkedAt || c.cache.usedBytes === null || c.cache.pendingBytes === null || c.pending === null;
+  const cacheUnknown = !c.disableFileCache && (!c.cache.checkedAt || c.cache.usedBytes === null || c.cache.pendingBytes === null || c.pending === null);
   const security = c.transportSecurity?.state;
   const alertError = !!(c.error || c.cache.error || uploadErrors || needsRecovery || c.mounted && security === "unencrypted");
   const items: { key: keyof typeof icons; title: string; visible?: boolean; tone?: "info" | "success" | "warning" | "danger" | "inactive"; content: ReactNode }[] = [
@@ -60,6 +60,7 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
         <div><dt>{t("Authentication")}</dt><dd>{t(c.authMethod === "serviceAccount" ? "Service account" : p.oauth ? "OAuth" : "Basic")}</dd></div>
         <div><dt>{t("Hidden files")}</dt><dd>{t(c.hiddenFileVisibility === "hide" ? "Always hide" : c.hiddenFileVisibility === "show" ? "Always show" : "Follow file manager settings")}</dd></div>
         <div><dt>{t("Open Explorer after connecting")}</dt><dd>{t(c.openExplorerAfterConnect ? "Enabled" : "Disabled")}</dd></div>
+        <div><dt>{t("Use local file cache")}</dt><dd>{t(c.disableFileCache ? "Disabled" : "Enabled")}</dd></div>
         <div><dt>{t("Directory metadata lifetime (seconds)")}</dt><dd>{c.directoryCacheSeconds || 300}</dd></div>
         <div><dt>{t("Virtual capacity in Explorer (GiB)")}</dt><dd>{c.virtualCapacityGiB || 0}</dd></div>
         {["webdav", "nextcloud", "owncloud"].includes(c.provider) && <div><dt>{t("Connection timeout (seconds)")}</dt><dd>{c.connectTimeout || 0}</dd></div>}
@@ -90,9 +91,13 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
       {c.mounted && c.pending !== null && c.pending > 0 && <p>{t("Close open files and wait for uploads before disconnecting.")}</p>}
     </> },
     { key: "cache", title: "Local cache", visible: cacheVisible, tone: c.cache.error ? "danger" : cacheUnknown ? "warning" : "info", content: <>
-      <p>{t("Approximate cache used: {used} · Pending file sizes: {pending}", { used: bytes(c.cache.usedBytes), pending: bytes(c.cache.pendingBytes) })}</p>
+      {c.disableFileCache && <p>{t("Local file cache is disabled.")}</p>}
+      {!c.disableFileCache && <p>{t("Approximate cache used: {used} · Pending file sizes: {pending}", { used: bytes(c.cache.usedBytes), pending: bytes(c.cache.pendingBytes) })}</p>}
       <p>{c.cache.checkedAt ? t("Local inspection: {time} (updated every 30 s)", { time: new Date(c.cache.checkedAt).toLocaleTimeString() }) : t("Local cache inspection unavailable")}</p>
+      {c.cache.recoveryPath && <p>{t("Local recovery is pending. Preserved files:")} {c.cache.recoveryPath}</p>}
       {c.cache.error && <p>{t(c.cache.error)}</p>}
+      {!!c.cache.issues?.length && <ul>{c.cache.issues.map((issue,index)=><li key={index}>{t(({missing_metadata:"File has no cache metadata",missing_data:"Pending file data is missing",invalid_metadata:"Cache metadata is invalid",access_failed:"Cache access failed",inventory_changed:"Cache changed during inspection",interrupted_rename:"A file replacement was interrupted",unexpected_entry:"Unexpected cache entry"} as Record<string,string>)[issue.code] || "Cache could not be verified")}{issue.path && <>: {issue.path}</>}</li>)}</ul>}
+      {!!c.cache.issueCount && c.cache.issueCount>20 && <p>{t("{count} cache issues found; showing the first 20.", {count:c.cache.issueCount})}</p>}
       <p className="detail-disclaimer"><em>{t("Pending sizes are whole local files, not bytes remaining to upload.")}</em></p>
     </> },
     { key: "network", title: "Network", visible: c.mounted || !!c.network?.state, tone: !c.network?.checkedAt || c.network?.state === "stale" || c.network?.partial ? "warning" : "info", content:
@@ -112,7 +117,10 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
       {needsRecovery && <p>{t("Preserved destination: {provider} · {path}", { provider: t(p.name), path: c.path || t("Root") })}
         {c.pending !== null && <> · {t("{count} pending upload(s)", { count: c.pending })}</>}{" "}
         {t("Recover using the original account and destination, wait for uploads, then disconnect.")}</p>}
+      {c.cache.recoveryPath && <p>{t("Local recovery is pending. Preserved files:")} {c.cache.recoveryPath}</p>}
       {c.cache.error && <p>{t(c.cache.error)}</p>}
+      {!!c.cache.issues?.length && <ul>{c.cache.issues.map((issue,index)=><li key={index}>{t(({missing_metadata:"File has no cache metadata",missing_data:"Pending file data is missing",invalid_metadata:"Cache metadata is invalid",access_failed:"Cache access failed",inventory_changed:"Cache changed during inspection",interrupted_rename:"A file replacement was interrupted",unexpected_entry:"Unexpected cache entry"} as Record<string,string>)[issue.code] || "Cache could not be verified")}{issue.path && <>: {issue.path}</>}</li>)}</ul>}
+      {!!c.cache.issueCount && c.cache.issueCount>20 && <p>{t("{count} cache issues found; showing the first 20.", {count:c.cache.issueCount})}</p>}
       {c.error && <p>{t(c.errorMessage || c.error)}</p>}
       {c.mounted && c.transportSecurity?.state !== "encrypted" && <TransportStatus connection={c} />}
     </> },

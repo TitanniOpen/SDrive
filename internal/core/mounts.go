@@ -81,6 +81,9 @@ func (s *Service) Mount(id string) (resultErr error) {
 		return fmt.Errorf("exit in progress")
 	}
 	c := s.store.Connections[i]
+	if s.hasPreservedCache(c) || s.renameJournalPending(c) {
+		return fmt.Errorf("Local recovery is pending. Open the preserved files before reconnecting.")
+	}
 	if s.recoveryHold {
 		cache, err := s.cacheRemotes()
 		if err != nil {
@@ -194,6 +197,12 @@ func (s *Service) Mount(id string) (resultErr error) {
 	}
 	if err == nil {
 		err = callRPC(ctx, rpc, "mount/mount", options, nil)
+	}
+	if err == nil {
+		if modeErr := verifyFileCacheMode(ctx, rpc, c); modeErr != nil {
+			_ = callRPC(ctx, rpc, "mount/unmount", map[string]string{"mountPoint": mountPoint(c)}, nil)
+			err = modeErr
+		}
 	}
 	var actual []engineMount
 	var checkErr error
@@ -447,7 +456,7 @@ func (s *Service) Exit() (resultErr error) {
 	}
 	connections := append([]Connection{}, s.store.Connections...)
 	for _, c := range connections {
-		if c.Recovery {
+		if c.Recovery && !s.verifiedPreservedCache(c) {
 			s.mu.Unlock()
 			return i18n.NewMessage("recovery.required_before_exit", map[string]string{"name": c.Name})
 		}
@@ -456,6 +465,9 @@ func (s *Service) Exit() (resultErr error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
 	defer cancel()
 	for _, c := range connections {
+		if s.verifiedPreservedCache(c) {
+			continue
+		}
 		pending, err := s.cachedPending(ctx, c)
 		if err != nil {
 			return fmt.Errorf("could not verify local cache before exiting; preserve the files")

@@ -126,6 +126,12 @@ func mountOptions(c Connection, settings Settings) map[string]any {
 	}
 	maxAge, writeBack := cacheDurations(settings)
 	vfs := map[string]any{"CacheMode": "full", "CacheMaxSize": int64(settings.CacheGiB) << 30, "CacheMinFreeSpace": int64(5) << 30, "CacheMaxAge": int64(maxAge), "WriteBack": int64(writeBack), "ReadOnly": c.ReadOnly, "DirCacheTime": int64(time.Duration(directorySeconds) * time.Second), "PollInterval": int64(poll)}
+	if c.DisableFileCache {
+		vfs["CacheMode"] = "off"
+		for _, key := range []string{"CacheMaxSize", "CacheMinFreeSpace", "CacheMaxAge", "WriteBack"} {
+			delete(vfs, key)
+		}
+	}
 	if c.VirtualCapacityGiB > 0 {
 		vfs["DiskSpaceTotalSize"] = c.VirtualCapacityGiB << 30
 	}

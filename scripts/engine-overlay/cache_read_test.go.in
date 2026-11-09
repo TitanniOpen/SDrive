@@ -1,0 +1,33 @@
+package vfs
+
+import (
+	"context"
+	"github.com/rclone/rclone/vfs/vfscommon"
+	"github.com/stretchr/testify/require"
+	"io"
+	"os"
+	"testing"
+)
+
+func TestCachedReadRefreshesEmptyFileBeforeCheckingEOF(t *testing.T) {
+	opt := vfscommon.Opt
+	opt.CacheMode = vfscommon.CacheModeFull
+	opt.HandleCaching = 0
+	r, v := newTestVFSOpt(t, &opt)
+	r.WriteObject(context.Background(), "document.txt", "", t1)
+	handle, err := v.OpenFile("document.txt", os.O_RDONLY, 0600)
+	require.NoError(t, err)
+	cached := handle.(*RWFileHandle)
+	require.NoError(t, cached.openPending())
+	require.NoError(t, cached.Close())
+	const updated = "updated disposable file contents"
+	r.WriteObject(context.Background(), "document.txt", updated, t2)
+	v.FlushDirCache()
+	handle, err = v.OpenFile("document.txt", os.O_RDONLY, 0600)
+	require.NoError(t, err)
+	defer handle.Close()
+	require.Equal(t, int64(len(updated)), handle.(*RWFileHandle).Size())
+	data, err := io.ReadAll(handle)
+	require.NoError(t, err)
+	require.Equal(t, updated, string(data))
+}

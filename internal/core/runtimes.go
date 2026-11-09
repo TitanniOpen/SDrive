@@ -22,6 +22,9 @@ func (s *Service) connectionRPC(c Connection) RPC {
 }
 
 func (s *Service) prepareConnection(ctx context.Context, c Connection, importLegacy bool) (RPC, error) {
+	if s.hasPreservedCache(c) || s.renameJournalPending(c) {
+		return nil, fmt.Errorf("Local recovery is pending. Open the preserved files before reconnecting.")
+	}
 	if s.startConnection == nil {
 		return s.rpc, nil
 	}

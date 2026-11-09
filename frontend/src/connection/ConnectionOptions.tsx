@@ -5,6 +5,7 @@ import { supportsNetworkOptions } from "./methods";
 export function DirectoryCacheOptions({ wizard }: { wizard: Wizard }) {
   const { t, connection: c, change, validationProps, fieldFeedback, initial } = wizard;
   return <>
+    <div className="field-with-help"><label className="check setting-switch"><input type="checkbox" role="switch" checked={!c.disableFileCache} disabled={initial.recovery} onChange={(e) => change({ disableFileCache: !e.target.checked })} />{t("Use local file cache")}</label><FieldHelp label={t("Use local file cache")}>{t("Without local file cache, some applications may not be able to edit files. Operations depend on the connection to the service. Memory buffers and directory metadata caching remain enabled.")}</FieldHelp></div>
     <div className="field-with-help">
       <label><span className="field-label">{t("Hidden files")}</span><select value={c.hiddenFileVisibility || "system"} disabled={initial.recovery} {...validationProps("hiddenFileVisibility")} aria-label={t("Hidden files")} onChange={(e) => change({ hiddenFileVisibility: e.target.value })}>
         <option value="system">{t("Follow file manager settings")}</option>

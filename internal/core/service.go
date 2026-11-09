@@ -447,7 +447,7 @@ func (s *Service) updateConnection(c Connection) error {
 	if s.exiting {
 		return fmt.Errorf("connection operation in progress")
 	}
-	if s.mounted[c.ID] || s.busy[c.ID] || old.Recovery {
+	if s.mounted[c.ID] || s.busy[c.ID] || old.Recovery || s.hasPreservedCache(old) {
 		return fmt.Errorf("unmount and resolve pending files before editing")
 	}
 	if c.Provider != old.Provider {
@@ -465,7 +465,7 @@ func (s *Service) updateConnection(c Connection) error {
 			return &FieldError{Field: field, Message: "The mount destination is reserved by another connection."}
 		}
 	}
-	if mountTarget(c) != mountTarget(old) {
+	if c.DisableFileCache != old.DisableFileCache || mountTarget(c) != mountTarget(old) {
 		if err := s.availableMount(c); err != nil {
 			return err
 		}
@@ -520,7 +520,7 @@ func (s *Service) Remove(id string) error {
 	if s.session != nil && s.session.connection.ID == id {
 		return fmt.Errorf("complete or cancel reconfiguration")
 	}
-	if s.mounted[id] || s.busy[id] || c.Recovery {
+	if s.mounted[id] || s.busy[id] || c.Recovery || s.hasPreservedCache(c) {
 		return fmt.Errorf("unmount and resolve pending files before removing")
 	}
 	previous := append([]Connection{}, s.store.Connections...)
@@ -604,6 +604,14 @@ func (s *Service) OpenMount(id string) error {
 		return err
 	}
 	i := s.index(id)
+	if i >= 0 && !s.mounted[id] && s.hasPreservedCache(s.store.Connections[i]) {
+		target := s.preservedCachePath(s.store.Connections[i])
+		s.mu.Unlock()
+		if s.open == nil {
+			return fmt.Errorf("desktop interface unavailable")
+		}
+		return s.open(target)
+	}
 	if i < 0 || !s.mounted[id] {
 		s.mu.Unlock()
 		return fmt.Errorf("drive is not mounted")

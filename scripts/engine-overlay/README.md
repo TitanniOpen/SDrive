@@ -14,8 +14,17 @@ The source additions follow the licenses of the packages they extend: rclone's M
 
 The authenticated `sdrive/network` RC endpoint accepts `start`, `stats` and `stop` actions with a nonempty session identifier. Starting the same identifier is idempotent; stats/stop reject a different identifier. Each isolated worker holds one in-memory session. Network samples never store paths, credentials, packet contents or hostnames.
 
-`prepare-network.mjs` verifies unique source anchors before overlaying the pinned common dialer's Read/Write calls and file-accounting hooks. It fails the build when those anchors change. Both build platforms use the same preparation code. Windows and Linux count successful socket bytes, including bytes returned together with an error, below TLS/SSH. HTTP storage, FTP/FTPS, internal SFTP, SMB, MEGA and Proton Drive use that shared transport in the supported configuration. External SSH and override configurations are reported as partial coverage. DNS performed by the resolver, kernel TCP/IP overhead, ACKs, retransmissions, TCP keepalive and VPN encapsulation are outside this counter. The local RC listener is not instrumented.
+`prepare-runtime.mjs` verifies unique source anchors before overlaying the pinned common dialer's Read/Write calls and file-accounting hooks. It fails the build when those anchors change. Both build platforms use the same preparation code. Windows and Linux count successful socket bytes, including bytes returned together with an error, below TLS/SSH. HTTP storage, FTP/FTPS, internal SFTP, SMB, MEGA and Proton Drive use that shared transport in the supported configuration. External SSH and override configurations are reported as partial coverage. DNS performed by the resolver, kernel TCP/IP overhead, ACKs, retransmissions, TCP keepalive and VPN encapsulation are outside this counter. The local RC listener is not instrumented.
 
 File-content accounting follows remote-to-local/VFS downloads and local-to-remote uploads, including active transfers; checks, local cache reads and server-side copies do not increment it. Retries may read content again, and application content is not equivalent to wire bytes. Listings, periodic checks, authentication, application retries and encryption overhead contribute to the measured socket total but cannot be separated reliably. The UI must never infer their sizes by subtracting the content counters. Counters are independent of the bounded completed-transfer history and RC statistics groups.
 
 Run the focused network tests through the existing overlay test runners. The real-engine `TestNetworkCountersIncludeMetadataAndIsolateWorkers` fixture verifies metadata-only traffic, worker isolation, control-API exclusion, file directions, stop and reconnect without privileged APIs or a real provider.
+
+## Cached file reads
+
+The runtime overlay validates a lazy cached handle before deciding EOF. Before
+opening a clean cached handle, its reported size comes from the known remote
+object rather than unvalidated local bytes. Dirty entries retain their local
+size. Regression tests prime an empty cache entry, replace the remote contents,
+and verify both the new size and the read contents. The fixture is generic and
+uses disposable local files.

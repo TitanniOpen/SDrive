@@ -45,6 +45,21 @@ func (f *fakeRPC) Call(ctx context.Context, method string, input, out any) error
 	if err != nil {
 		return err
 	}
+	if method == "vfs/stats" {
+		if result == nil {
+			result = map[string]any{}
+		}
+		if stats, ok := result.(map[string]any); ok {
+			if _, exists := stats["opt"]; !exists {
+				cloned := map[string]any{}
+				for k, v := range stats {
+					cloned[k] = v
+				}
+				cloned["opt"] = map[string]any{"CacheMode": "full"}
+				result = cloned
+			}
+		}
+	}
 	// Setup fixtures model the configuration stored by a successful rclone write.
 	f.mu.Lock()
 	if method == "config/create" || method == "config/update" {

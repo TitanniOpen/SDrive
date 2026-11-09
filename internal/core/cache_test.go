@@ -166,7 +166,7 @@ func TestCacheInspectionRejectsLinksAndUnexpectedRoots(t *testing.T) {
 	})
 }
 
-func TestFailedSamplesAreCachedButSafetyChecksAreFresh(t *testing.T) {
+func TestCacheWarningsRefreshWhileSafetyChecksAreFresh(t *testing.T) {
 	s := testService(t, &fakeRPC{})
 	c := testConnection()
 	s.store.Connections = []Connection{c}
@@ -178,8 +178,8 @@ func TestFailedSamplesAreCachedButSafetyChecksAreFresh(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"Dirty":false}`), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if got := s.sampleCache(context.Background(), c); got.err == nil || got.CheckedAt != first.CheckedAt {
-		t.Fatal("failed sample not retained")
+	if got := s.sampleCache(context.Background(), c); got.err != nil || got.CheckedAt == first.CheckedAt {
+		t.Fatal("resolved warning was retained")
 	}
 	if _, err := s.cachedPending(context.Background(), c); err != nil {
 		t.Fatal("safety check reused failed sample")
@@ -277,5 +277,89 @@ func TestExitRejectsUnknownDisconnectedCache(t *testing.T) {
 	s.quit = func() { quit = true }
 	if s.Exit() == nil || quit || s.exiting {
 		t.Fatal("unknown cache allowed exit or prevented retry")
+	}
+}
+
+func TestCacheInspectionClassifiesMissingMetadataDataAndInterruptedRenames(t *testing.T) {
+	for _, scenario := range []string{"missing_metadata", "missing_data", "invalid_metadata", "interrupted_rename"} {
+		t.Run(scenario, func(t *testing.T) {
+			s := testService(t, &fakeRPC{})
+			c := testConnection()
+			data := "bytes"
+			meta := cacheFixture(t, s, c, `{"Dirty":true}`, &data)
+			switch scenario {
+			case "missing_metadata":
+				if err := os.Remove(meta); err != nil {
+					t.Fatal(err)
+				}
+			case "missing_data":
+				if err := os.Remove(filepath.Join(s.dataPath(), "vfs", "sd_"+c.Remote, "nested", "file")); err != nil {
+					t.Fatal(err)
+				}
+			case "invalid_metadata":
+				if err := os.WriteFile(meta, []byte("broken"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			case "interrupted_rename":
+				root := filepath.Join(s.dataPath(), "sdrive-renames", "sd_"+c.Remote, "operation")
+				if err := os.MkdirAll(root, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join(root, "manifest.json"), []byte("interrupted"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			result := s.inspectCache(context.Background(), c)
+			found := false
+			for _, issue := range result.Issues {
+				if issue.Code == scenario {
+					found = true
+				}
+			}
+			if result.err == nil || !found {
+				t.Fatalf("missing classification: %+v", result)
+			}
+			if scenario == "interrupted_rename" {
+				if _, err := s.prepareConnection(context.Background(), c, false); err == nil {
+					t.Fatal("journal bypassed")
+				}
+			}
+		})
+	}
+}
+
+func TestCacheInspectionBoundsIssueDetails(t *testing.T) {
+	s := testService(t, &fakeRPC{})
+	c := testConnection()
+	root := filepath.Join(s.dataPath(), "vfs", "sd_"+c.Remote)
+	if err := os.MkdirAll(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 23; i++ {
+		if err := os.WriteFile(filepath.Join(root, fmtValue(i)), []byte("orphan"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result := s.inspectCache(context.Background(), c)
+	if result.err == nil || len(result.Issues) != 20 || result.IssueCount != 23 {
+		t.Fatalf("unbounded or incomplete issue inventory: %+v", result)
+	}
+}
+
+func TestCommittedReplacementDoesNotBlockWhileReadersClose(t *testing.T) {
+	s := testService(t, &fakeRPC{})
+	c := testConnection()
+	root := filepath.Join(s.dataPath(), "sdrive-renames", "sd_"+c.Remote, "rename-complete")
+	if err := os.MkdirAll(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "manifest.json"), []byte(`{"Stage":"committed"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "displaced-data"), []byte("previous contents"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if s.renameJournalPending(c) {
+		t.Fatal("completed replacement reported as interrupted")
 	}
 }

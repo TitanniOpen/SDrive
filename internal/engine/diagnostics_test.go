@@ -138,3 +138,15 @@ func TestLogStreamIsBoundedDrainedAndSanitized(t *testing.T) {
 		t.Fatal(report)
 	}
 }
+
+func TestCacheRenameDiagnosticsExcludeSensitiveDetails(t *testing.T) {
+	log := diagnostics.New(t.TempDir())
+	defer log.Close()
+	e := &Engine{diagnostics: log}
+	writer := &logWriter{e: e, ready: make(chan string, 1)}
+	_, _ = writer.Write([]byte(`{"level":"error","msg":"File.Rename failed in Cache: C:\\Private token=secret"}` + "\n"))
+	report := log.Report()
+	if !strings.Contains(report, "cache_rename") || strings.Contains(report, "Private") || strings.Contains(report, "secret") {
+		t.Fatal(report)
+	}
+}

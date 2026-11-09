@@ -376,3 +376,20 @@ func (e *Engine) Close() {
 	}
 	e.process.close()
 }
+
+// CloseGracefully never kills a worker with potentially recoverable writes.
+func (e *Engine) CloseGracefully(ctx context.Context) error {
+	if !e.Alive() {
+		return nil
+	}
+	e.statusMu.Lock()
+	e.requested = true
+	e.statusMu.Unlock()
+	_ = e.Call(ctx, "core/quit", map[string]any{}, nil)
+	select {
+	case <-e.done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}

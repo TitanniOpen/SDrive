@@ -1,0 +1,139 @@
+package vfscache
+
+import (
+	"context"
+	"github.com/rclone/rclone/lib/file"
+	"github.com/stretchr/testify/require"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"testing"
+)
+
+func TestCacheRenameFailureKeepsOriginalMetadataAndIdentity(t *testing.T) {
+	_, c := newTestCache(t)
+	item := c.Item("database.tmp")
+	require.NoError(t, item.Open(nil))
+	require.NoError(t, item.Close(nil))
+	require.NoError(t, os.MkdirAll(c.toOSPath("database"), 0700))
+	err := c.Rename("database.tmp", "database", nil)
+	require.Error(t, err)
+	require.Equal(t, "database.tmp", item.GetName())
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(c.renameJournalRoot())) })
+	_, err = os.Stat(c.toOSPathMeta("database.tmp"))
+	require.NoError(t, err)
+	_, err = os.Stat(c.toOSPath("database.tmp"))
+	require.NoError(t, err)
+}
+
+func TestCacheRenameJournalPreservesReplacementOnMetadataFailure(t *testing.T) {
+	_, c := newTestCache(t)
+	for _, name := range []string{"source", "destination"} {
+		item := c.Item(name)
+		require.NoError(t, item.Open(nil))
+		require.NoError(t, item.Close(nil))
+		require.NoError(t, os.WriteFile(c.toOSPath(name), []byte(name), 0600))
+	}
+	original := moveCacheFile
+	defer func() { moveCacheFile = original }()
+	calls := 0
+	moveCacheFile = func(a, b string) error {
+		calls++
+		if calls == 2 {
+			return os.ErrPermission
+		}
+		return original(a, b)
+	}
+	require.Error(t, c.Rename("source", "destination", nil))
+	root := c.renameJournalRoot()
+	require.Error(t, pendingRenameJournal(root))
+	entries, err := os.ReadDir(root)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	for _, role := range []string{"source-data", "destination-data"} {
+		b, err := os.ReadFile(filepath.Join(root, entries[0].Name(), role))
+		require.NoError(t, err)
+		require.Equal(t, role[:len(role)-5], string(b))
+	}
+	require.Equal(t, "source", c.Item("source").GetName())
+	require.NoError(t, os.RemoveAll(root))
+}
+func TestCacheRenameJournalKeepsInterruptedPreparationAndCleansSuccess(t *testing.T) {
+	_, c := newTestCache(t)
+	item := c.Item("source")
+	require.NoError(t, item.Open(nil))
+	require.NoError(t, item.Close(nil))
+	finish, err := c.beginRenameJournal("source", "destination")
+	require.NoError(t, err)
+	root := c.renameJournalRoot()
+	require.Error(t, pendingRenameJournal(root))
+	require.NoError(t, finish.finish(false))
+	require.Error(t, pendingRenameJournal(root))
+	require.NoError(t, finish.finish(true))
+	require.NoError(t, pendingRenameJournal(root))
+}
+
+func TestCacheRenameJournalRestartProbe(t *testing.T) {
+	root := os.Getenv("SDRIVE_RENAME_JOURNAL_TEST")
+	if root == "" {
+		return
+	}
+	require.Error(t, pendingRenameJournal(root))
+	entries, err := os.ReadDir(root)
+	require.NoError(t, err)
+	require.NotEmpty(t, entries)
+	_, err = os.Stat(filepath.Join(root, entries[0].Name(), "source-data"))
+	require.NoError(t, err)
+}
+func TestCacheRenameJournalBlocksReloadAfterInterruptedDataMove(t *testing.T) {
+	_, c := newTestCache(t)
+	item := c.Item("source")
+	require.NoError(t, item.Open(nil))
+	require.NoError(t, item.Close(nil))
+	op, err := c.beginRenameJournal("source", "destination")
+	require.NoError(t, err)
+	root := c.renameJournalRoot()
+	t.Cleanup(func() { require.NoError(t, os.RemoveAll(root)) })
+	require.NoError(t, moveCacheFile(c.toOSPath("source"), c.toOSPath("destination")))
+	require.NoError(t, op.checkpoint("data_moved"))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	reloaded, err := New(ctx, c.fremote, c.opt, nil)
+	require.Error(t, err)
+	require.Nil(t, reloaded)
+	cmd := exec.Command(os.Args[0], "-test.run=^TestCacheRenameJournalRestartProbe$")
+	cmd.Env = append(os.Environ(), "SDRIVE_RENAME_JOURNAL_TEST="+root)
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+}
+
+func TestCacheReplacementPreservesOpenDestinationReader(t *testing.T) {
+	_, c := newTestCache(t)
+	for _, name := range []string{"replacement.tmp", "document.txt"} {
+		item := c.Item(name)
+		require.NoError(t, item.Open(nil))
+		require.NoError(t, item.Close(nil))
+		require.NoError(t, os.WriteFile(c.toOSPath(name), []byte(name), 0600))
+	}
+	previous := c.Item("document.txt")
+	require.NoError(t, previous.Open(nil))
+	reader, err := file.OpenFile(c.toOSPath("document.txt"), os.O_RDONLY, 0600)
+	require.NoError(t, err)
+	defer reader.Close()
+	t.Cleanup(func() { _ = os.RemoveAll(c.renameJournalRoot()) })
+	require.NoError(t, c.Rename("replacement.tmp", "document.txt", nil))
+	data, err := os.ReadFile(c.toOSPath("document.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "replacement.tmp", string(data))
+	metadata, err := os.ReadFile(c.toOSPathMeta("document.txt"))
+	require.NoError(t, err)
+	require.NoError(t, previous.Close(nil))
+	current, err := os.ReadFile(c.toOSPathMeta("document.txt"))
+	require.NoError(t, err)
+	require.Equal(t, string(metadata), string(current))
+	old := make([]byte, 32)
+	n, err := reader.Read(old)
+	require.NoError(t, err)
+	require.Equal(t, "document.txt", string(old[:n]))
+	require.NoError(t, pendingRenameJournal(c.renameJournalRoot()))
+}

@@ -79,7 +79,7 @@ func TestBackupPreservesPreviousSettingsAndFailedWrites(t *testing.T) {
 	}
 	first := readFixture(t, dir, "settings.json")
 	var shape map[string]any
-	if json.Unmarshal(first, &shape) != nil || shape["version"] != float64(6) {
+	if json.Unmarshal(first, &shape) != nil || shape["version"] != float64(7) {
 		t.Fatal("new settings are not versioned")
 	}
 	next := old

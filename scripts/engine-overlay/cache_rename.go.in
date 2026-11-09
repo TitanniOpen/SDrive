@@ -1,0 +1,272 @@
+package vfscache
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"github.com/rclone/rclone/fs"
+	"github.com/rclone/rclone/fs/config"
+	"io"
+	"os"
+	"path/filepath"
+)
+
+var moveCacheFile = rename
+
+type cacheRenameJournal struct {
+	Source      string
+	Destination string
+	Stage       string
+	Files       []cacheRenameCopy
+}
+type cacheRenameCopy struct {
+	Role string
+	Hash string
+}
+
+func syncRenameJSON(path string, value any) error {
+	b, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(b)
+	if err == nil {
+		err = f.Sync()
+	}
+	closeErr := f.Close()
+	if err != nil {
+		return err
+	}
+	return closeErr
+}
+func copyRenameFile(source, dest string) (string, error) {
+	info, err := os.Lstat(source)
+	if err != nil {
+		return "", err
+	}
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("unexpected cache rename source")
+	}
+	in, err := os.Open(source)
+	if err != nil {
+		return "", err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dest, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return "", err
+	}
+	hash := sha256.New()
+	_, err = io.Copy(io.MultiWriter(out, hash), in)
+	if err == nil {
+		err = out.Sync()
+	}
+	closeErr := out.Close()
+	if err != nil {
+		return "", err
+	}
+	if closeErr != nil {
+		return "", closeErr
+	}
+	saved, err := os.Open(dest)
+	if err != nil {
+		return "", err
+	}
+	defer saved.Close()
+	verify := sha256.New()
+	if _, err = io.Copy(verify, saved); err != nil {
+		return "", err
+	}
+	sum := hex.EncodeToString(hash.Sum(nil))
+	if hex.EncodeToString(verify.Sum(nil)) != sum {
+		return "", fmt.Errorf("cache rename backup verification failed")
+	}
+	return sum, nil
+}
+func (c *Cache) renameJournalRoot() string {
+	return c.renameRoot
+}
+
+type cacheRenameOperation struct {
+	path, root, dir string
+	journal         cacheRenameJournal
+}
+
+func (operation *cacheRenameOperation) checkpoint(stage string) error {
+	operation.journal.Stage = stage
+	return syncRenameJSON(operation.path, operation.journal)
+}
+func (operation *cacheRenameOperation) finish(success bool) error {
+	if !success {
+		return nil
+	}
+	if err := operation.checkpoint("committed"); err != nil {
+		return err
+	}
+	if err := cleanupCommittedRename(operation.dir); err != nil {
+		return nil
+	}
+	for current := operation.root; current != filepath.Join(config.GetCacheDir(), "sdrive-renames"); current = filepath.Dir(current) {
+		if os.Remove(current) != nil {
+			break
+		}
+	}
+	return nil
+}
+func (c *Cache) beginRenameJournal(name, newName string) (*cacheRenameOperation, error) {
+	root := c.renameJournalRoot()
+	if root == "" {
+		return nil, fmt.Errorf("invalid cache root")
+	}
+	if err := os.MkdirAll(root, 0700); err != nil {
+		return nil, err
+	}
+	info, e := os.Lstat(root)
+	if e != nil {
+		return nil, e
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, fmt.Errorf("unexpected rename journal directory")
+	}
+	dir, err := os.MkdirTemp(root, "rename-")
+	if err != nil {
+		return nil, err
+	}
+	journal := cacheRenameJournal{Source: name, Destination: newName, Stage: "preparing", Files: []cacheRenameCopy{}}
+	path := filepath.Join(dir, "manifest.json")
+	if err = syncRenameJSON(path, journal); err != nil {
+		return nil, err
+	}
+	for _, file := range []struct{ role, path string }{{"source-data", c.toOSPath(name)}, {"source-metadata", c.toOSPathMeta(name)}, {"destination-data", c.toOSPath(newName)}, {"destination-metadata", c.toOSPathMeta(newName)}} {
+		sum, e := copyRenameFile(file.path, filepath.Join(dir, file.role))
+		if os.IsNotExist(e) {
+			continue
+		}
+		if e != nil {
+			return nil, e
+		}
+		journal.Files = append(journal.Files, cacheRenameCopy{Role: file.role, Hash: sum})
+	}
+	journal.Stage = "prepared"
+	if err = syncRenameJSON(path, journal); err != nil {
+		return nil, err
+	}
+	return &cacheRenameOperation{path: path, root: root, dir: dir, journal: journal}, nil
+}
+func pendingRenameJournal(root string) error {
+	entries, err := os.ReadDir(root)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		path := filepath.Join(root, entry.Name())
+		b, e := os.ReadFile(filepath.Join(path, "manifest.json"))
+		var journal cacheRenameJournal
+		if e != nil || json.Unmarshal(b, &journal) != nil || journal.Stage != "committed" {
+			if children, readErr := os.ReadDir(path); readErr == nil && len(children) == 0 {
+				_ = os.Remove(path)
+				continue
+			}
+			return fmt.Errorf("interrupted cache rename requires preservation")
+		}
+		_ = cleanupCommittedRename(path)
+	}
+	return nil
+}
+
+func (operation *cacheRenameOperation) move(source, destination, role string) error {
+	sourceInfo, err := os.Lstat(source)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	displaced := filepath.Join(operation.dir, "displaced-"+role)
+	if destinationInfo, e := os.Lstat(destination); e == nil {
+		if os.SameFile(sourceInfo, destinationInfo) {
+			return nil
+		}
+		if !destinationInfo.Mode().IsRegular() {
+			return fmt.Errorf("unexpected replacement destination")
+		}
+		if err = os.Rename(destination, displaced); err != nil {
+			return fmt.Errorf("preserve replacement destination: %w", err)
+		}
+		if err = operation.checkpoint(role + "_destination_displaced"); err != nil {
+			_ = os.Rename(displaced, destination)
+			return err
+		}
+	} else if !os.IsNotExist(e) {
+		return e
+	}
+	if err = moveCacheFile(source, destination); err != nil {
+		if _, e := os.Lstat(destination); os.IsNotExist(e) {
+			_ = os.Rename(displaced, destination)
+		}
+		return err
+	}
+	return nil
+}
+func (c *Cache) renameReplacingItem(item *Item, name, newName string, object fs.Object) error {
+	item.preAccess()
+	defer item.postAccess()
+	c.mu.Lock()
+	previous := c.item[newName]
+	c.mu.Unlock()
+	if previous == nil || previous == item {
+		return item.rename(name, newName, object)
+	}
+	previous.preAccess()
+	defer previous.postAccess()
+	previous.mu.Lock()
+	err := item.rename(name, newName, object)
+	if err == nil {
+		previous.retired = true
+	}
+	id := previous.writeBackID
+	previous.mu.Unlock()
+	if err == nil {
+		c.writeback.Remove(id)
+	}
+	return err
+}
+
+func cleanupCommittedRename(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if entry.Name() == "manifest.json" {
+			continue
+		}
+		if err = os.Remove(filepath.Join(dir, entry.Name())); err != nil {
+			return err
+		}
+	}
+	entries, err = os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if entry.Name() != "manifest.json" {
+			return fmt.Errorf("replacement readers are still open")
+		}
+	}
+	if err = os.Remove(filepath.Join(dir, "manifest.json")); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return os.Remove(dir)
+}

@@ -1,14 +1,17 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"sdrive/internal/platform"
@@ -22,11 +25,19 @@ type UploadView struct {
 	CacheErrors int `json:"cacheErrors"`
 }
 
+type CacheIssue struct {
+	Code string `json:"code"`
+	Path string `json:"path"`
+}
+
 type CacheView struct {
-	CheckedAt    *time.Time `json:"checkedAt"`
-	PendingBytes *int64     `json:"pendingBytes"`
-	UsedBytes    *uint64    `json:"usedBytes"`
-	Error        string     `json:"error"`
+	Issues       []CacheIssue `json:"issues,omitempty"`
+	IssueCount   int          `json:"issueCount,omitempty"`
+	RecoveryPath string       `json:"recoveryPath,omitempty"`
+	CheckedAt    *time.Time   `json:"checkedAt"`
+	PendingBytes *int64       `json:"pendingBytes"`
+	UsedBytes    *uint64      `json:"usedBytes"`
+	Error        string       `json:"error"`
 }
 
 type localCache struct {
@@ -42,9 +53,35 @@ type cacheInspection struct {
 	result     localCache
 }
 
+func cacheModeMatches(raw json.RawMessage, disabled bool) bool {
+	switch string(bytes.TrimSpace(raw)) {
+	case "0", `"off"`:
+		return disabled
+	case "3", `"full"`:
+		return !disabled
+	}
+	return false
+}
+
+func verifyFileCacheMode(ctx context.Context, rpc RPC, c Connection) error {
+	var response struct {
+		Opt struct{ CacheMode json.RawMessage }
+	}
+	if err := rpc.Call(ctx, "vfs/stats", map[string]string{"fs": remote(c)}, &response); err != nil {
+		return fmt.Errorf("Could not confirm the requested file cache mode.")
+	}
+	if !cacheModeMatches(response.Opt.CacheMode, c.DisableFileCache) {
+		return fmt.Errorf("The engine did not enable the requested file cache mode. Review the connection status.")
+	}
+	return nil
+}
+
 // shortcut: these fields follow rclone v1.75.2; revalidate on engine upgrades.
 func readCacheStats(ctx context.Context, rpc RPC, c Connection) (*UploadView, *uint64, error) {
 	var response struct {
+		ActiveWriters *int `json:"activeWriters"`
+		Opt           struct{ CacheMode json.RawMessage }
+
 		DiskCache *struct {
 			UploadsInProgress *int
 			UploadsQueued     *int
@@ -59,6 +96,12 @@ func readCacheStats(ctx context.Context, rpc RPC, c Connection) (*UploadView, *u
 	}
 	if err := rpc.Call(ctx, "vfs/stats", map[string]string{"fs": remote(c)}, &response); err != nil {
 		return nil, nil, fmt.Errorf("could not check pending uploads; preserve the cache")
+	}
+	if c.DisableFileCache {
+		if !cacheModeMatches(response.Opt.CacheMode, c.DisableFileCache) || response.ActiveWriters == nil || *response.ActiveWriters < 0 {
+			return nil, nil, fmt.Errorf("could not confirm direct file writes; preserve the connection")
+		}
+		return &UploadView{Active: *response.ActiveWriters}, nil, nil
 	}
 	d := response.DiskCache
 	if d == nil || d.UploadsInProgress == nil || d.UploadsQueued == nil || d.ErroredFiles == nil || d.Files == nil || d.OutOfSpace == nil || d.BytesUsed == nil {
@@ -151,49 +194,136 @@ func readDirty(ctx context.Context, path string) (bool, error) {
 }
 
 func (s *Service) inspectCache(ctx context.Context, c Connection) localCache {
+	result := s.inspectCacheOnce(ctx, c)
+	if errors.Is(result.err, os.ErrNotExist) && ctx.Err() == nil {
+		return s.inspectCacheOnce(ctx, c)
+	}
+	return result
+}
+
+func (s *Service) renameJournalPending(c Connection) bool {
+	root := filepath.Join(s.dataPath(), "sdrive-renames", "sd_"+c.Remote)
+	found := false
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), "rename-") {
+			if children, e := os.ReadDir(path); e == nil && len(children) == 0 {
+				return fs.SkipDir
+			}
+			b, e := os.ReadFile(filepath.Join(path, "manifest.json"))
+			var journal struct{ Stage string }
+			if e == nil && json.Unmarshal(b, &journal) == nil && journal.Stage == "committed" {
+				return fs.SkipDir
+			}
+		}
+		if entry.Type()&os.ModeSymlink != 0 || !entry.IsDir() || strings.HasPrefix(entry.Name(), "rename-") {
+			found = true
+			return fs.SkipAll
+		}
+		return nil
+	})
+	return found || err != nil
+}
+
+func (s *Service) inspectCacheOnce(ctx context.Context, c Connection) localCache {
 	result := localCache{}
+	if s.hasPreservedCache(c) {
+		result.RecoveryPath = s.preservedCachePath(c)
+	}
+	add := func(code, path string, err error) {
+		for _, issue := range result.Issues {
+			if issue.Code == code && issue.Path == filepath.ToSlash(path) {
+				return
+			}
+		}
+		result.IssueCount++
+		if len(result.Issues) < 20 {
+			result.Issues = append(result.Issues, CacheIssue{Code: code, Path: filepath.ToSlash(path)})
+		}
+		if result.err == nil {
+			result.err = err
+		}
+		result.Error = "Local cache files could not be verified. Preserve and disconnect to keep a recovery copy."
+	}
 	if err := s.cacheReady(); err != nil {
-		result.err = err
-		result.Error = "Could not inspect local cache; preserve the files and try again."
+		add("access_failed", "", err)
 		return result
+	}
+	if s.renameJournalPending(c) {
+		add("interrupted_rename", "", fmt.Errorf("interrupted cache rename requires preservation"))
+	}
+	meta := filepath.Join(s.dataPath(), "vfsMeta", "sd_"+c.Remote)
+	data := filepath.Join(s.dataPath(), "vfs", "sd_"+c.Remote)
+	for _, path := range []string{s.dataPath(), filepath.Dir(meta), filepath.Dir(data), filepath.Join(s.dataPath(), "sdrive-renames")} {
+		info, err := os.Lstat(path)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			add("access_failed", "", err)
+			return result
+		}
+		if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+			add("unexpected_entry", "", fmt.Errorf("unexpected cache directory"))
+			return result
+		}
+	}
+	classify := func(err error) string {
+		if errors.Is(err, os.ErrNotExist) {
+			return "inventory_changed"
+		}
+		if errors.Is(err, os.ErrPermission) {
+			return "access_failed"
+		}
+		return "invalid_metadata"
 	}
 	var used uint64
 	var pendingBytes int64
 	usageKnown, sizeKnown := true, true
 	dirtyFiles := map[string]bool{}
 	seenDirty := 0
-	meta := filepath.Join(s.dataPath(), "vfsMeta", "sd_"+c.Remote)
-	data := filepath.Join(s.dataPath(), "vfs", "sd_"+c.Remote)
-	// Check ancestors too: a linked cache root must never redirect inspection elsewhere.
-	for _, path := range []string{s.dataPath(), filepath.Dir(meta), filepath.Dir(data)} {
-		info, err := os.Lstat(path)
-		if os.IsNotExist(err) {
-			continue
-		}
-		if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
-			result.err = fmt.Errorf("unexpected cache directory")
-			return result
-		}
-	}
 	err := inspectFiles(ctx, meta, func(path string, _ fs.FileInfo) error {
+		rel, _ := filepath.Rel(meta, path)
 		dirty, err := readDirty(ctx, path)
 		if err != nil {
-			return err
+			add(classify(err), rel, err)
+			return ctx.Err()
 		}
 		if dirty {
 			result.pending++
-			rel, _ := filepath.Rel(meta, path)
 			dirtyFiles[rel] = true
+			info, err := os.Lstat(filepath.Join(data, rel))
+			if err != nil {
+				code := classify(err)
+				if os.IsNotExist(err) {
+					code = "missing_data"
+				}
+				add(code, rel, err)
+			} else if !info.Mode().IsRegular() {
+				add("unexpected_entry", rel, fmt.Errorf("unexpected cache entry"))
+			}
 		}
-		return nil
+		return ctx.Err()
 	})
-	if err == nil {
+	if err != nil {
+		add(classify(err), "", err)
+	}
+	if ctx.Err() == nil {
 		err = inspectFiles(ctx, data, func(path string, info fs.FileInfo) error {
 			rel, _ := filepath.Rel(data, path)
-			// A backing file without metadata cannot establish a clean cache.
 			dirty, err := readDirty(ctx, filepath.Join(meta, rel))
 			if err != nil {
-				return err
+				code := classify(err)
+				if os.IsNotExist(err) {
+					code = "missing_metadata"
+				}
+				add(code, rel, err)
+				return ctx.Err()
 			}
 			if dirty && !dirtyFiles[rel] {
 				result.pending++
@@ -213,12 +343,13 @@ func (s *Service) inspectCache(ctx context.Context, c Connection) localCache {
 			} else {
 				used += n
 			}
-			return nil
+			return ctx.Err()
 		})
+		if err != nil {
+			add(classify(err), "", err)
+		}
 	}
-	result.err = err
-	if err != nil {
-		result.Error = "Could not inspect local cache; preserve the files and try again."
+	if result.err != nil {
 		return result
 	}
 	if usageKnown {
@@ -245,7 +376,7 @@ func (s *Service) sampleCache(ctx context.Context, c Connection) localCache {
 	if s.inspections == nil {
 		s.inspections = map[string]*cacheInspection{}
 	}
-	if previous := s.inspections[c.ID]; previous != nil && previous.connection == c && (!previous.complete || time.Since(previous.at) < 30*time.Second) {
+	if previous := s.inspections[c.ID]; previous != nil && previous.connection == c && (!previous.complete || previous.result.err == nil && time.Since(previous.at) < 30*time.Second) {
 		complete, result := previous.complete, previous.result
 		s.mu.Unlock()
 		if complete {

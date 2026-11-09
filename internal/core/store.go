@@ -15,6 +15,7 @@ import (
 )
 
 type Connection struct {
+	DisableFileCache      bool   `json:"disableFileCache,omitempty"`
 	HiddenFileVisibility  string `json:"hiddenFileVisibility,omitempty"`
 	OpenMountAfterConnect bool   `json:"openExplorerAfterConnect,omitempty"`
 	CardStyle             string `json:"cardStyle,omitempty"`
@@ -98,7 +99,7 @@ func decodeStore(b []byte) (Store, error) {
 	}
 	version := 0
 	if shape.Version != nil {
-		if bytes.Equal(bytes.TrimSpace(shape.Version), []byte("null")) || json.Unmarshal(shape.Version, &version) != nil || version < 1 || version > 6 {
+		if bytes.Equal(bytes.TrimSpace(shape.Version), []byte("null")) || json.Unmarshal(shape.Version, &version) != nil || version < 1 || version > 7 {
 			return s, errSettingsVersion
 		}
 	}
@@ -185,7 +186,7 @@ func encodeStore(s Store) ([]byte, error) {
 	b, err := json.MarshalIndent(struct {
 		Version int `json:"version"`
 		Store
-	}{Version: 6, Store: s}, "", "  ")
+	}{Version: 7, Store: s}, "", "  ")
 	if err != nil {
 		return nil, err
 	}
