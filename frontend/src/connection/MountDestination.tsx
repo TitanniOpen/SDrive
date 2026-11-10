@@ -4,7 +4,7 @@ import { api } from "../api";
 import type { Wizard } from "./useConnectionWizard";
 
 export function MountDestination({ wizard, collapsed = false }: { wizard: Wizard; collapsed?: boolean }) {
-  const { t, connection: c, change, busy, letterLocked, letters, validationProps, fieldFeedback, action } = wizard;
+  const { t, connection: c, change, busy, letterLocked, letters, validationProps, fieldFeedback, action, fieldID } = wizard;
   const linux = wizard.data.platform === "linux";
   const folder = linux || c.mountFolder !== undefined && c.letter === "";
   const disclosure = useRef<HTMLDetailsElement>(null);
@@ -23,28 +23,28 @@ export function MountDestination({ wizard, collapsed = false }: { wizard: Wizard
     </label>}
     {folder ? <>
       <div className="field-with-help">
-      <div className="field-action"><label><span className="field-label">{t("Local mount folder")}</span><input disabled={busy || letterLocked} {...validationProps("mountFolder")} required value={c.mountFolder || ""} onChange={(e) => change({ mountFolder: e.target.value })} /></label>
+      <div className="field-action"><div className="field-control"><div className="field-heading"><label htmlFor={`${fieldID}-mount-local-folder`}>{t("Local mount folder")}</label><FieldHelp label={t("Local mount folder")}>{t("Choose an existing parent and a new subfolder name. The final path must not exist; SDrive never removes existing contents.")}</FieldHelp></div><input id={`${fieldID}-mount-local-folder`} disabled={busy || letterLocked} {...validationProps("mountFolder")} required value={c.mountFolder || ""} onChange={(e) => change({ mountFolder: e.target.value })} /></div>
       <button type="button" onClick={() => void action(async () => {
         const parent = await api.selectDirectory();
         if (parent) change({ mountFolder: parent.replace(/[\\/]+$/, "") + (linux ? "/SDrive" : "\\SDrive") });
       })}>{t("Choose parent directory")}</button></div>
       {fieldFeedback("mountFolder")}
-      <FieldHelp label={t("Local mount folder")}>{t("Choose an existing parent and a new subfolder name. The final path must not exist; SDrive never removes existing contents.")}</FieldHelp></div>
+      </div>
     </> : <>
-      <div className="field-with-help"><label><span className="field-label">{t("Windows drive letter")}</span><select disabled={busy || letterLocked || !letters.length} {...validationProps("letter")} aria-label={t("Windows drive letter")} value={letters.includes(c.letter) ? c.letter : ""} onChange={(e) => change({ letter: e.target.value })}>
+      <div className="field-with-help"><div className="field-control"><div className="field-heading"><label htmlFor={`${fieldID}-mount-drive-letter`}>{t("Windows drive letter")}</label><FieldHelp label={t("Windows drive letter")}>{t("Choose a free letter. If connecting fails, you can correct it here and retry the saved connection.")}</FieldHelp></div><select id={`${fieldID}-mount-drive-letter`} disabled={busy || letterLocked || !letters.length} {...validationProps("letter")} aria-label={t("Windows drive letter")} value={letters.includes(c.letter) ? c.letter : ""} onChange={(e) => change({ letter: e.target.value })}>
         {!letters.includes(c.letter) && <option value="" disabled>{t("Select…")}</option>}
         {letters.filter(Boolean).map((letter) => <option key={letter} value={letter}>{letter}:</option>)}
-      </select></label>
+      </select></div>
       {fieldFeedback("letter")}
-      <FieldHelp label={t("Windows drive letter")}>{t("Choose a free letter. If connecting fails, you can correct it here and retry the saved connection.")}</FieldHelp></div>
+      </div>
       {letterLocked && <p role="status">{t("Keep the saved letter while recovery or an operation is pending. Resolve pending files before changing it.")}</p>}
     </>}
-    {!linux && <div className="field-with-help">{folder ? <p>{t("Drive presentation")} · {t("Local disk")}</p> : <label><span className="field-label">{t("Drive presentation")}</span><select {...validationProps("mountMode")} value={c.mountMode || "network"} disabled={busy || letterLocked} onChange={(e) => change({ mountMode: e.target.value })}>
+    {!linux && <div className="field-with-help">{folder ? <div className="field-heading"><span>{t("Drive presentation")} · {t("Local disk")}</span><FieldHelp label={t("Drive presentation")}>{t("Folder mounts require local-disk mode. SDrive runs in your Windows session; elevated applications may see different drives. Local-disk access is restricted to your user.")}</FieldHelp></div> : <div className="field-control"><div className="field-heading"><label htmlFor={`${fieldID}-mount-presentation`}>{t("Drive presentation")}</label><FieldHelp label={t("Drive presentation")}>{t("Folder mounts require local-disk mode. SDrive runs in your Windows session; elevated applications may see different drives. Local-disk access is restricted to your user.")}</FieldHelp></div><select id={`${fieldID}-mount-presentation`} {...validationProps("mountMode")} value={c.mountMode || "network"} disabled={busy || letterLocked} onChange={(e) => change({ mountMode: e.target.value })}>
       <option value="network">{t("Network drive")}</option>
       <option value="local">{t("Local disk")}</option>
-    </select></label>}
+    </select></div>}
     {fieldFeedback("mountMode")}
-    <FieldHelp label={t("Drive presentation")}>{t("Folder mounts require local-disk mode. SDrive runs in your Windows session; elevated applications may see different drives. Local-disk access is restricted to your user.")}</FieldHelp>
+
     </div>}
     {linux && <p>{t("Mounted folders are restricted to your user. FUSE must be available in your desktop session.")}</p>}
   </fieldset>;

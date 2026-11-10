@@ -1,10 +1,10 @@
 import { afterEach, expect, test } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { FieldHelp } from "./FieldHelp";
 
 afterEach(cleanup);
 
-test("help keeps its accessible description and opens with hover, focus or click", () => {
+test("help keeps its accessible description and opens with hover, focus or click", async () => {
   render(<FieldHelp id="server-help" label="Server">Use your server address.</FieldHelp>);
   const trigger = screen.getByRole("button", { name: "Help for Server" });
   expect(trigger.getAttribute("aria-describedby")).toBe("server-help");
@@ -13,7 +13,7 @@ test("help keeps its accessible description and opens with hover, focus or click
   fireEvent.mouseEnter(trigger);
   expect(screen.getByRole("tooltip")).toBeTruthy();
   fireEvent.mouseLeave(trigger);
-  expect(screen.queryByRole("tooltip")).toBeNull();
+  await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
   act(() => trigger.focus());
   expect(screen.getByRole("tooltip")).toBeTruthy();
   act(() => trigger.blur());
@@ -31,4 +31,23 @@ test("Escape dismisses hovered help before it can close the dialog", () => {
   fireEvent(document.body, escape);
   expect(escape.defaultPrevented).toBe(true);
   expect(screen.queryByRole("tooltip")).toBeNull();
+});
+
+test("hovering the wrapper does not open help outside the icon", () => {
+  render(<FieldHelp label="Cache">Cache explanation.</FieldHelp>);
+  const trigger = screen.getByRole("button");
+  fireEvent.mouseEnter(trigger.parentElement!);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  fireEvent.mouseEnter(trigger);
+  expect(screen.getByRole("tooltip")).toBeTruthy();
+});
+
+test("help remains open when moving from the icon into its text", async () => {
+  render(<FieldHelp label="Cache">Cache explanation.</FieldHelp>);
+  const trigger = screen.getByRole("button");
+  fireEvent.mouseEnter(trigger);
+  fireEvent.mouseLeave(trigger);
+  fireEvent.mouseEnter(screen.getByRole("tooltip"));
+  await new Promise(resolve => setTimeout(resolve, 200));
+  expect(screen.getByRole("tooltip")).toBeTruthy();
 });

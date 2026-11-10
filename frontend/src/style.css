@@ -419,27 +419,26 @@ legend { color: var(--muted); font-size: calc(14px * var(--text-scale, 1)); padd
 .dialog-navigation .navigation-items > button:is([aria-selected="true"], [aria-current="step"]) { color: var(--on-accent); background: var(--accent); border-color: var(--accent); font-weight: 600; }
 .step-number { flex-shrink: 0; font-size: calc(12px * var(--text-scale, 1)); }
 .navigation-toggle { display: none; }
-.access-intro { display: flex; align-items: center; justify-content: space-between; gap: calc(8px * var(--spacing-scale)); margin-bottom: calc(16px * var(--spacing-scale)); }
+.access-intro { display: flex; align-items: center; justify-content: flex-start; gap: calc(8px * var(--spacing-scale)); margin-bottom: calc(16px * var(--spacing-scale)); }
 .access-intro > h3, .access-intro > .field-help { margin: 0; }
 .transport-capability { display: flex; align-items: center; gap: calc(8px * var(--spacing-scale)); margin-bottom: calc(16px * var(--spacing-scale)); font-size: calc(13px * var(--text-scale, 1)); color: var(--muted); }
-.transport-capability > .field-help { margin: 0; }
 .transport-warning { display: block; }
 .transport-warning > small { margin-top: calc(6px * var(--spacing-scale)); }
-.field-help { display: inline-flex; vertical-align: middle; margin: calc(-8px * var(--spacing-scale)) 0 calc(8px * var(--spacing-scale)); }
-.help-trigger { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; padding: calc(4px * var(--spacing-scale)); color: var(--accent); background: transparent; border-color: transparent; }
+.field-help { display: inline-flex; vertical-align: middle; flex-shrink: 0; margin: 0; }
+.help-trigger { display: inline-grid; place-items: center; min-width: 0; min-height: 0; width: 1.2em; height: 1.2em; line-height: 1; padding: 0; border: 0; border-radius: 50%; color: var(--accent); background: transparent; }
+.help-trigger:hover { background: transparent; color: var(--text); }
+@media (pointer: coarse) { .help-trigger { min-width: 44px; min-height: 44px; } }
 .field-help-content { position: fixed; z-index: 5; width: 320px; padding: calc(12px * var(--spacing-scale)) calc(16px * var(--spacing-scale)); border-radius: 8px; border: 1px solid var(--border); background: var(--popover); color: var(--text); box-shadow: 0 4px 16px var(--shadow); font-size: calc(13px * var(--text-scale, 1)); line-height: 1.6; user-select: text; overflow: auto; max-height: min(50dvh, 300px); }
-.credential-field, .field-with-help { position: relative; }
-.credential-field > .field-help, .field-with-help > .field-help { position: absolute; right: 0; top: -12px; margin: 0; }
-.credential-field > label, .credential-field .secret-input > label, .field-with-help > label { padding-top: calc(2px * var(--spacing-scale)); }
-.credential-field label, .field-with-help > label { text-indent: 0; }
-.credential-field:has(> .field-help) .field-label, .credential-field:has(> .field-help) .secret-input > label,
-.field-with-help .field-label { display: block; padding-right: calc(44px * var(--spacing-scale)); }
-.option-with-help { display: flex; align-items: flex-start; gap: calc(4px * var(--spacing-scale)); }
-.option-with-help > label, .option-with-help > span { flex: 1; }
-.option-with-help > .field-help { flex-shrink: 0; margin: calc(-10px * var(--spacing-scale)) 0 0; }
-.option-with-help:has(> .setting-switch) { position: relative; }
-.option-with-help > .setting-switch { min-width: 0; gap: 52px; }
-.option-with-help:has(> .setting-switch) > .field-help { position: absolute; right: 36px; top: 0; margin: 0; }
+.field-heading { display: flex; align-items: center; gap: calc(6px * var(--spacing-scale)); min-width: 0; margin-bottom: calc(8px * var(--spacing-scale)); }
+.field-heading > label { display: inline; margin: 0; min-width: 0; }
+.field-control { display: flex; flex-direction: column; margin-bottom: calc(16px * var(--spacing-scale)); min-width: 0; }
+.credential-field > .field-control { margin-bottom: 0; }
+.field-action > .field-control { grid-column: 1; grid-row: 1; margin-bottom: 0; }
+.setting-switch:has(> .field-heading) { display: flex; align-items: center; min-height: 44px; gap: calc(12px * var(--spacing-scale)); margin-bottom: calc(16px * var(--spacing-scale)); }
+.setting-switch > .field-heading { margin-bottom: 0; }
+.setting-switch > .field-heading > label { cursor: pointer; }
+.option-with-help { display: flex; align-items: center; gap: calc(6px * var(--spacing-scale)); }
+.option-with-help > .setting-switch, .field-with-help > .setting-switch { width: 100%; }
 .mount-summary { margin: calc(16px * var(--spacing-scale)) 0; }
 .mount-summary > summary { display: flex; flex-wrap: wrap; gap: calc(6px * var(--spacing-scale)); align-items: center; }
 .mount-summary > summary::before { content: "▸"; }

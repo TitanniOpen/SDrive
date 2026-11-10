@@ -17,14 +17,14 @@ export function AccessFields({ advanced, wizard }: { advanced: boolean; wizard: 
       .map((f) => (
         <div className={`credential-field${f.file ? " field-action" : ""}`} key={`${p.id}-${f.key}`}>
           {f.secret ? (
-            <SecretInput label={t(f.label)}
+            <SecretInput label={t(f.label)} help={f.hint && <FieldHelp id={`${fieldID}-${f.key}-help`} label={t(f.label)}>{t(f.hint)}</FieldHelp>}
               validation={validationProps(f.key, f.hint ? `${fieldID}-${f.key}-help` : undefined)}
               value={values[f.key] ?? f.default ?? ""} required={f.required || (f.key === "client_secret" && !wizard.initial.id)}
               onChange={(value) => setValue(f.key, value)} />
-          ) : <label>
-          <span className="field-label">{t(f.label)}</span>
+          ) : <div className="field-control">
+          <div className="field-heading"><label htmlFor={`${fieldID}-${f.key}-input`}>{t(f.label)}</label>{f.hint && <FieldHelp id={`${fieldID}-${f.key}-help`} label={t(f.label)}>{t(f.hint)}</FieldHelp>}</div>
           {f.choices ? (
-            <select
+            <select id={`${fieldID}-${f.key}-input`}
               disabled={["shared_with_me", "export_formats"].includes(f.key) && wizard.initial.recovery}
               {...validationProps(f.key, f.hint ? `${fieldID}-${f.key}-help` : undefined)}
               value={values[f.key] ?? f.default}
@@ -42,7 +42,7 @@ export function AccessFields({ advanced, wizard }: { advanced: boolean; wizard: 
               ))}
             </select>
           ) : (
-            <input
+            <input id={`${fieldID}-${f.key}-input`}
               {...validationProps(f.key, f.hint ? `${fieldID}-${f.key}-help` : undefined)}
               type="text"
               autoComplete="off"
@@ -51,9 +51,8 @@ export function AccessFields({ advanced, wizard }: { advanced: boolean; wizard: 
               onChange={(e) => setValue(f.key, e.target.value)}
             />
           )}
-          </label>}
+          </div>}
           {fieldFeedback(f.key)}
-          {f.hint && <FieldHelp id={`${fieldID}-${f.key}-help`} label={t(f.label)}>{t(f.hint)}</FieldHelp>}
           {f.file && (
             <button
               type="button"

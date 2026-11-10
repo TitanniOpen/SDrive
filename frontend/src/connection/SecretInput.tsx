@@ -1,20 +1,21 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useLanguage } from "../i18n";
 
-export function SecretInput({ label, value, required, onChange, validation, describedBy }: {
+export function SecretInput({ label, value, required, onChange, validation, describedBy, help }: {
   label: string;
   value: string;
   required: boolean;
   onChange: (value: string) => void;
   validation?: { "data-field": string; "aria-invalid": boolean; "aria-describedby": string | undefined };
   describedBy?: string;
+  help?: ReactNode;
 }) {
   const { t } = useLanguage();
   const id = useId();
   const [revealed, setRevealed] = useState(false);
   return (
     <div className="secret-input">
-      <label htmlFor={id}>{label}</label>
+      <div className="field-heading"><label htmlFor={id}>{label}</label>{help}</div>
       <div className="secret-control">
         <input data-sensitive id={id} type={revealed ? "text" : "password"} autoComplete="off"
           {...validation}

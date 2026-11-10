@@ -116,9 +116,9 @@ export function ConnectionEditor(props: EditorProps) {
                 {p.id === "ftp" && <p>{t("FTP uses passive transfers only. Active mode, Mode Z compression and legacy filename charsets are not supported.")}</p>}
                 {p.id === "ftp" && (
                   <>
-                    <label>
-                      {t("Access type")}
-                      <select
+                    <div className="field-control">
+                      <div className="field-heading"><label htmlFor={`${fieldID}-editor-transport`}>{t("Access type")}</label><FieldHelp id={`${fieldID}-transport-help`} label={t("Access type")}>{t("FTPS encrypts the connection. Unencrypted FTP exposes credentials and file content to the network.")}</FieldHelp></div>
+                      <select id={`${fieldID}-editor-transport`}
                         aria-describedby={`${fieldID}-transport-help`}
                         value={transport}
                         onChange={(e) => setTransport(e.target.value)}
@@ -129,52 +129,49 @@ export function ConnectionEditor(props: EditorProps) {
                         <option value="implicit">{t("Implicit FTPS")}</option>
                         <option value="plain">{t("Unencrypted FTP")}</option>
                       </select>
-                    </label>
-                    <FieldHelp id={`${fieldID}-transport-help`} label={t("Access type")}>{t("FTPS encrypts the connection. Unencrypted FTP exposes credentials and file content to the network.")}</FieldHelp>
+                    </div>
+
                   </>
                 )}
                 {["webdav", "nextcloud", "owncloud", "s3", "ftp"].includes(
                   p.id,
                 ) && (
                   <>
-                    <div className="option-with-help"><label className="check setting-switch">
-                      <input
+                    <div className="option-with-help"><div className="check setting-switch">
+                      <input id={`${fieldID}-editor-unencrypted`}
                         type="checkbox" role="switch"
                         aria-describedby={`${fieldID}-insecure-help`}
                         checked={insecure}
                         onChange={(e) => setInsecure(e.target.checked)}
                       />
-                      {t("Allow unencrypted connection (HTTP / FTP)")}
-                    </label>
-                    <FieldHelp id={`${fieldID}-insecure-help`} label={t("Allow unencrypted connection (HTTP / FTP)")}>{t("Unencrypted connections expose credentials and file content to the network.")}</FieldHelp></div>
+                      <span className="field-heading"><label htmlFor={`${fieldID}-editor-unencrypted`}>{t("Allow unencrypted connection (HTTP / FTP)")}</label><FieldHelp id={`${fieldID}-insecure-help`} label={t("Allow unencrypted connection (HTTP / FTP)")}>{t("Unencrypted connections expose credentials and file content to the network.")}</FieldHelp></span></div>
+                    </div>
                   </>
                 )}
                 </fieldset>}
                 {!initial.id && <label className="check setting-switch"><input type="checkbox" role="switch" checked={connection.openExplorerAfterConnect || false} onChange={(e) => change({ openExplorerAfterConnect: e.target.checked })} />{t("Open Explorer after connecting")}</label>}
                 {(!initial.id || connection.provider === "drive") && <fieldset className="option-group"><legend>{t("Drive behavior")}</legend>
-                <div className="option-with-help"><label className="check setting-switch">
-                  <input
+                <div className="option-with-help"><div className="check setting-switch">
+                  <input id={`${fieldID}-editor-read-only`}
                     type="checkbox" role="switch"
                     aria-describedby={`${fieldID}-readonly-help`}
                     checked={connection.readOnly}
                     disabled={initial.recovery}
                     onChange={(e) => change({ readOnly: e.target.checked })}
                   />
-                  {t("Mount read only")}
-                </label>
-                <FieldHelp id={`${fieldID}-readonly-help`} label={t("Mount read only")}>{t("Prevents changes through this drive. Account permissions remain unchanged.")}</FieldHelp></div>
+                  <span className="field-heading"><label htmlFor={`${fieldID}-editor-read-only`}>{t("Mount read only")}</label><FieldHelp id={`${fieldID}-readonly-help`} label={t("Mount read only")}>{t("Prevents changes through this drive. Account permissions remain unchanged.")}</FieldHelp></span></div>
+                </div>
                 {!initial.id && !connection.sessionOnly && <>
-                <div className="option-with-help"><label className="check setting-switch">
-                  <input
+                <div className="option-with-help"><div className="check setting-switch">
+                  <input id={`${fieldID}-editor-auto-mount`}
                     type="checkbox" role="switch"
                     aria-describedby={`${fieldID}-automount-help`}
                     disabled={connection.sessionOnly}
                     checked={connection.autoMount}
                     onChange={(e) => change({ autoMount: e.target.checked })}
                   />
-                  {t("Connect automatically when SDrive starts")}
-                </label>
-                <FieldHelp id={`${fieldID}-automount-help`} label={t("Connect automatically when SDrive starts")}>{t("SDrive attempts to connect this drive when it starts. Recovery may require your attention.")}</FieldHelp></div>
+                  <span className="field-heading"><label htmlFor={`${fieldID}-editor-auto-mount`}>{t("Connect automatically when SDrive starts")}</label><FieldHelp id={`${fieldID}-automount-help`} label={t("Connect automatically when SDrive starts")}>{t("SDrive attempts to connect this drive when it starts. Recovery may require your attention.")}</FieldHelp></span></div>
+                </div>
                 </>}
                 </fieldset>}
                 </fieldset>
@@ -319,30 +316,28 @@ export function ConnectionEditor(props: EditorProps) {
               <MountDestination wizard={wizard} />
               <label className="check setting-switch"><input type="checkbox" role="switch" checked={connection.openExplorerAfterConnect || false} onChange={(e) => change({ openExplorerAfterConnect: e.target.checked })} />{t("Open Explorer after connecting")}</label>
               {connection.provider !== "drive" && <>
-              <div className="option-with-help"><label className="check setting-switch">
-                <input
+              <div className="option-with-help"><div className="check setting-switch">
+                <input id={`${fieldID}-editor-edit-read-only`}
                   type="checkbox" role="switch"
                   aria-describedby={`${fieldID}-readonly-help`}
                   checked={connection.readOnly}
                   onChange={(e) => change({ readOnly: e.target.checked })}
                 />
-                {t("Mount read only")}
-              </label>
-              <FieldHelp id={`${fieldID}-readonly-help`} label={t("Mount read only")}>{t("Prevents changes through this drive. Account permissions remain unchanged.")}</FieldHelp></div>
+                <span className="field-heading"><label htmlFor={`${fieldID}-editor-edit-read-only`}>{t("Mount read only")}</label><FieldHelp id={`${fieldID}-readonly-help`} label={t("Mount read only")}>{t("Prevents changes through this drive. Account permissions remain unchanged.")}</FieldHelp></span></div>
+              </div>
               </>}
               {connection.provider === "drive" && <p>{t("Use the Access section to change Google Drive access mode and update OAuth consent.")}</p>}
               {!connection.sessionOnly && <>
-              <div className="option-with-help"><label className="check setting-switch">
-                <input
+              <div className="option-with-help"><div className="check setting-switch">
+                <input id={`${fieldID}-editor-edit-auto-mount`}
                   type="checkbox" role="switch"
                   aria-describedby={`${fieldID}-automount-help`}
                   disabled={connection.sessionOnly}
                       checked={connection.autoMount}
                   onChange={(e) => change({ autoMount: e.target.checked })}
                 />
-                {t("Connect automatically when SDrive starts")}
-              </label>
-              <FieldHelp id={`${fieldID}-automount-help`} label={t("Connect automatically when SDrive starts")}>{t("SDrive attempts to connect this drive when it starts. Recovery may require your attention.")}</FieldHelp></div>
+                <span className="field-heading"><label htmlFor={`${fieldID}-editor-edit-auto-mount`}>{t("Connect automatically when SDrive starts")}</label><FieldHelp id={`${fieldID}-automount-help`} label={t("Connect automatically when SDrive starts")}>{t("SDrive attempts to connect this drive when it starts. Recovery may require your attention.")}</FieldHelp></span></div>
+              </div>
               </>}
             </div>
             <div id={`${fieldID}-edit-files-panel`} role="tabpanel" aria-labelledby={`${fieldID}-edit-files-tab`} data-edit-tab="files" hidden={editTab !== "files"}>

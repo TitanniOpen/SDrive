@@ -591,6 +591,10 @@ try {
   await verifySelectedSection();
   await bounds(); await capture("connection-service");
   const help = page.getByRole("button", { name: "Help for Windows drive letter", exact: true });
+  const helpBox = await help.boundingBox();
+  assert(helpBox.width < 30 && helpBox.height < 30, "Mouse help target must hug the icon");
+  await page.mouse.move(helpBox.x + helpBox.width + 3, helpBox.y + helpBox.height / 2);
+  assert.equal(await page.getByRole("tooltip").count(), 0, "Space beside the icon must not open help");
   await help.hover();
   const tooltip = page.getByRole("tooltip");
   await tooltip.waitFor();
@@ -628,6 +632,20 @@ try {
     for (const group of ["Files and cache", "Network", "Drive behavior"]) await advanced.getByRole("group", { name: group, exact: true }).waitFor();
     assert.equal(await page.getByLabel("Hidden files", { exact: true }).inputValue(), "system");
     await page.getByLabel("Hidden files", { exact: true }).selectOption("hide");
+    const cacheSwitch = page.getByRole("switch", { name: "Use local file cache", exact: true });
+    const cacheChecked = await cacheSwitch.isChecked();
+    const cacheHelp = page.getByRole("button", { name: "Help for Use local file cache", exact: true });
+    await cacheHelp.click();
+    assert.equal(await cacheSwitch.isChecked(), cacheChecked, "Help must not toggle file cache");
+    await page.keyboard.press("Escape");
+    for (const heading of await page.locator(".field-heading:visible").all()) {
+      const icon = heading.locator(".help-trigger");
+      if (!await icon.count()) continue;
+      const label = heading.locator("label").first();
+      if (!await label.count()) continue;
+      const labelBox = await label.boundingBox(), iconBox = await icon.boundingBox();
+      assert(iconBox.x >= labelBox.x + labelBox.width && iconBox.x - labelBox.x - labelBox.width < 15, "Help must follow its label");
+    }
     await bounds(); await capture("advanced-groups-" + width);
     const metadata = page.getByRole("spinbutton", { name: "Directory metadata lifetime (seconds)", exact: true });
     await metadata.fill("-1");

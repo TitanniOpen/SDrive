@@ -5,9 +5,11 @@ export function FieldHelp({ id, label, children }: { id?: string; label: string;
   const generatedID = useId();
   const helpID = id || generatedID;
   const { t } = useLanguage();
-  const root = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const content = useRef<HTMLSpanElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0, maxWidth: 320 });
   useLayoutEffect(() => {
@@ -41,12 +43,15 @@ export function FieldHelp({ id, label, children }: { id?: string; label: string;
     document.addEventListener("keydown", escape, true);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape, true); };
   }, [open]);
-  return <div ref={root} className="field-help" onMouseEnter={() => setOpen(true)}
-    onMouseLeave={() => { if (!root.current?.contains(document.activeElement)) setOpen(false); }}
+  return <span ref={root} className="field-help"
+    onMouseEnter={() => clearTimeout(closeTimer.current)}
+    onMouseLeave={() => {
+      closeTimer.current = setTimeout(() => { if (!root.current?.contains(document.activeElement)) setOpen(false); }, 150);
+    }}
     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
     <button ref={button} type="button" className="help-trigger" aria-label={t("Help for {field}", { field: label })}
-      aria-describedby={helpID} onFocus={() => setOpen(true)} onClick={() => setOpen(true)}>ⓘ</button>
+      aria-describedby={helpID} onMouseEnter={() => setOpen(true)} onFocus={() => setOpen(true)} onClick={() => setOpen(true)}>ⓘ</button>
     <span ref={content} id={helpID} role={open ? "tooltip" : undefined} className={open ? "field-help-content" : "sr-only"}
       style={open ? position : undefined}>{children}</span>
-  </div>;
+  </span>;
 }
