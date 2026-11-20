@@ -12,6 +12,7 @@ import { DialogLayout } from "./DialogLayout";
 import { DialogNavigation } from "./DialogNavigation";
 import { useTheme, themeLabels, type Theme, type Density } from "./theme";
 import { LoadingStatus } from "./Spinner";
+import { FieldHelp } from "./FieldHelp";
 
 const tabs = ["General", "Appearance", "Drive cards", "Disconnection", "Cache", "Network", "Configuration"] as const;
 
@@ -115,6 +116,19 @@ export function Preferences({
           </div>
           <div id={`${helpID}-Appearance-panel`} role="tabpanel" aria-labelledby={`${helpID}-Appearance-tab`} data-preference-tab="Appearance" hidden={tab !== "Appearance"}>
             <AppearanceOptions section="Appearance" value={settings.appearance} onChange={appearance => setSettings({...settings, appearance})}/>
+            <div className="field-control">
+              <div className="field-heading">
+                <label htmlFor={`${helpID}-size-units`}>{t("Size units")}</label>
+                <FieldHelp id={`${helpID}-size-units-help`} label={t("Size units")}>
+                  {t("Binary units (base 2) use 1,024 per step: 1 GiB = 1,024³ = 1,073,741,824 bytes.")}<br />
+                  {t("Decimal units (base 10) use 1,000 per step: 1 GB = 1,000³ = 1,000,000,000 bytes.")}
+                </FieldHelp>
+              </div>
+              <select id={`${helpID}-size-units`} aria-describedby={`${helpID}-size-units-help`} disabled={busy} value={settings.sizeUnits || "binary"} onChange={e => setSettings({ ...settings, sizeUnits: e.target.value === "decimal" ? "decimal" : "binary" })}>
+                <option value="binary">{t("Binary (base 2)")}</option>
+                <option value="decimal">{t("Decimal (base 10)")}</option>
+              </select>
+            </div>
             <label>{t("Spacing")}<select aria-label={t("Spacing")} disabled={busy} value={settings.density || "balanced"} onChange={(e) => { const density = e.target.value as Density; setSettings({ ...settings, density }); setDensityPreview(density); }}>{(["compact", "balanced", "comfortable"] as const).map(value => <option key={value} value={value}>{t({ compact: "Compact", balanced: "Balanced", comfortable: "Comfortable" }[value])}</option>)}</select></label>
             <label>{t("Theme")}<select aria-label={t("Theme")} disabled={busy} value={settings.theme} onChange={(e) => {
               const theme = e.target.value as Theme; setSettings({ ...settings, theme }); setPreview(theme);

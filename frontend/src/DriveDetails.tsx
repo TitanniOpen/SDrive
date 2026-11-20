@@ -4,7 +4,7 @@ import { api, type ConnectionDetail, type ConnectionView, type Provider } from "
 import { LoadingStatus } from "./Spinner";
 import { useLanguage } from "./i18n";
 import { TransportStatus } from "./TransportSecurity";
-import { formatBytes as bytes } from "./formatBytes";
+import { formatBytes, formatCapacity, type SizeUnits } from "./formatBytes";
 import { NetworkDetails } from "./NetworkDetails";
 
 export interface DriveDetailSelection { connectionID: string; topic: string }
@@ -20,13 +20,15 @@ const icons = {
   alerts: "M12 3 2 21h20ZM12 9v5M12 17v1",
 };
 
-export function DriveDetails({ connection: c, provider: p, selection, onSelect }: {
+export function DriveDetails({ connection: c, provider: p, sizeUnits, selection, onSelect }: {
   connection: ConnectionView;
   provider: Provider;
+  sizeUnits?: SizeUnits;
   selection: DriveDetailSelection | undefined;
   onSelect: (selection: DriveDetailSelection | undefined) => void;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const bytes = (value: number | null) => formatBytes(value, sizeUnits);
   const id = useId();
   const strip = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
         <div><dt>{t("Open Explorer after connecting")}</dt><dd>{t(c.openExplorerAfterConnect ? "Enabled" : "Disabled")}</dd></div>
         <div><dt>{t("Use local file cache")}</dt><dd>{t(c.disableFileCache ? "Disabled" : "Enabled")}</dd></div>
         <div><dt>{t("Directory metadata lifetime")}</dt><dd>{c.directoryCacheSeconds || 300} {t("seconds")}</dd></div>
-        <div><dt>{t("Virtual capacity in Explorer")}</dt><dd>{c.virtualCapacityGiB || 0} GiB</dd></div>
+        <div><dt>{t("Virtual capacity in Explorer")}</dt><dd>{formatCapacity(c.virtualCapacityGiB || 0, language, sizeUnits)}</dd></div>
         {["webdav", "nextcloud", "owncloud"].includes(c.provider) && <div><dt>{t("Connection timeout (seconds)")}</dt><dd>{c.connectTimeout || 0}</dd></div>}
         {["webdav", "nextcloud", "owncloud"].includes(c.provider) && <div><dt>{t("HTTP idle timeout (seconds)")}</dt><dd>{c.idleTimeout || 0}</dd></div>}
         {p.oauth && c.authMethod !== "serviceAccount" && <div><dt>{t("Sign-in browser")}</dt><dd>{c.browser || t("Default browser")}</dd></div>}
@@ -100,7 +102,7 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
       <p className="detail-disclaimer"><em>{t("Pending sizes are whole local files, not bytes remaining to upload.")}</em></p>
     </> },
     { key: "network", title: "Network", visible: c.mounted || !!c.network?.state, tone: !c.network?.checkedAt || c.network?.state === "stale" || c.network?.partial ? "warning" : "info", content:
-      <NetworkDetails network={c.network || { state: "unavailable", partial: false, startedAt: null, checkedAt: null, sent: null, received: null, filesSent: null, filesReceived: null }} mounted={c.mounted} /> },
+      <NetworkDetails network={c.network || { state: "unavailable", partial: false, startedAt: null, checkedAt: null, sent: null, received: null, filesSent: null, filesReceived: null }} mounted={c.mounted} sizeUnits={sizeUnits} /> },
     { key: "capacity", title: "Remote capacity", visible: c.mounted && c.capacity.state !== "unsupported", tone: c.capacity.state === "available" ? "info" : "warning", content: <>
       <p>{t("Remote capacity: {total} · Used: {used} · Available: {free}", { total: bytes(c.capacity.total), used: bytes(c.capacity.used), free: bytes(c.capacity.free) })}</p>
       {c.capacity.state !== "available" && c.capacity.state !== "stale" && <p>{t("Remote capacity is currently unknown.")}</p>}

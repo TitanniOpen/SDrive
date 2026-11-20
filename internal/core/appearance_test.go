@@ -1,9 +1,40 @@
 package core
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
+
+func TestSizeUnitsPersistWithoutChangingPortablePreferences(t *testing.T) {
+	s, err := New(t.TempDir(), nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	SetAutoStart(s, func(bool) error { return nil })
+	settings := s.store.Settings
+	if settings.SizeUnits != "" {
+		t.Fatalf("default should use implicit binary units, got %q", settings.SizeUnits)
+	}
+	settings.SizeUnits = "decimal"
+	if err := s.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := loadStore(s.dir)
+	if err != nil || stored.Settings.SizeUnits != "decimal" {
+		t.Fatalf("decimal units not restored: %v", err)
+	}
+	portable := portablePreferences(settings)
+	data, err := json.Marshal(portable)
+	if err != nil || strings.Contains(string(data), "sizeUnits") || portable.settings(settings).SizeUnits != "decimal" {
+		t.Fatalf("portable preferences affected local size units: %s (%v)", data, err)
+	}
+	settings.SizeUnits = "invalid"
+	if s.SaveSettings(settings) == nil {
+		t.Fatal("invalid size units accepted")
+	}
+}
 
 func TestAppearancePersistenceAndPortableRoundTrip(t *testing.T) {
 	s, err := New(t.TempDir(), nil, "")

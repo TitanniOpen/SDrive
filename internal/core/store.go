@@ -50,6 +50,7 @@ type Connection struct {
 }
 type Settings struct {
 	Appearance       *AppearancePreferences `json:"appearance,omitempty"`
+	SizeUnits        string                 `json:"sizeUnits,omitempty"`
 	Density          string                 `json:"density"`
 	Theme            string                 `json:"theme"`
 	ShowServiceIcons bool                   `json:"showServiceIcons"`
@@ -123,6 +124,9 @@ func decodeStore(b []byte) (Store, error) {
 	}
 	if !validDensity(s.Settings.Density) {
 		s.Settings.Density = "balanced"
+	}
+	if !validSizeUnits(s.Settings.SizeUnits) {
+		s.Settings.SizeUnits = ""
 	}
 	if !validTheme(s.Settings.Theme) {
 		s.Settings.Theme = "system"

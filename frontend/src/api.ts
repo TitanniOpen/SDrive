@@ -113,6 +113,7 @@ export interface NetworkView {
 }
 export interface Settings {
  appearance?: import("./appearance").AppearancePreferences;
+  sizeUnits?: import("./formatBytes").SizeUnits;
   density?: Density;
   theme: Theme;
 	showServiceIcons: boolean;
@@ -180,7 +181,7 @@ export interface Browser { id: string; name: string }
 export interface ProxyConfig { address: string; username: string; password: string; hasPassword: boolean }
 
 export type PortableConnection = Omit<Connection, "id" | "remote" | "recovery" | "targetHash" | "resourceID" | "primaryURL" | "binding"> & { values: Record<string, string>; transport: string };
-export type PortablePreferences = Omit<Settings, "autoStart">;
+export type PortablePreferences = Omit<Settings, "autoStart" | "sizeUnits">;
 export interface PortableFile { format: string; version: number; connections: PortableConnection[]; preferences: PortablePreferences }
 export interface ImportDraft { id: string; definition: PortableConnection }
 export interface ImportPreview { id: string; document: PortableFile }

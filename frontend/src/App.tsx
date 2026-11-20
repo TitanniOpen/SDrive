@@ -10,7 +10,7 @@ import { DriveList } from "./DriveList";
 import { DriveDiagnostics } from "./DriveDiagnostics";
 import { CachePreservation } from "./CachePreservation";
 import { DriveDetails, type DriveDetailSelection } from "./DriveDetails";
-import { formatBytes as bytes } from "./formatBytes";
+import { formatBytes, formatCapacity, type SizeUnits } from "./formatBytes";
 import { AccessBoundary, AccessSettings } from "./AccessProtection";
 import { ConnectionEditor } from "./connection/ConnectionEditor";
 import { useDialog } from "./useDialog";
@@ -60,7 +60,7 @@ export function App() {
 }
 
 function AppContent({ onLocked }: { onLocked: () => void }) {
-  const { t, setLanguage } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { setTheme, setDensity } = useTheme();
   const [data, setData] = useState<Snapshot>();
   const [loadingSnapshot, setLoadingSnapshot] = useState(true);
@@ -410,6 +410,7 @@ function AppContent({ onLocked }: { onLocked: () => void }) {
               key={c.id}
               connection={c}
               appearancePreferences={data.settings.appearance}
+              sizeUnits={data.settings.sizeUnits}
               detailSelection={driveDetail}
               onDetailSelect={setDriveDetail}
               provider={data.providers.find((p) => p.id === c.provider)!}
@@ -456,8 +457,8 @@ function AppContent({ onLocked }: { onLocked: () => void }) {
         </div>
         <footer className="main-footer">
         {data && !data.settingsError && (
-          <p className="cache-note">{t("Cache target: {count} GiB per connection", { count: data.settings.cacheGiB })}
-            {" · "}{t("Free on cache disk: {size}", { size: bytes(data.freeBytes) })}
+          <p className="cache-note">{t("Cache target: {size} per connection", { size: formatCapacity(data.settings.cacheGiB, language, data.settings.sizeUnits) })}
+            {" · "}{t("Free on cache disk: {size}", { size: formatBytes(data.freeBytes, data.settings.sizeUnits) })}
             {" · "}{t("Pending files are preserved even when the target is exceeded.")}
           </p>
         )}
@@ -565,6 +566,7 @@ function Drive({
   connection: c,
   provider: p,
   appearancePreferences = appearanceDefaults,
+  sizeUnits,
   detailSelection,
   onDetailSelect,
   busy,
@@ -576,6 +578,7 @@ function Drive({
 }: {
   connection: ConnectionView;
   appearancePreferences?: AppearancePreferences;
+  sizeUnits?: SizeUnits;
   provider: Provider;
   detailSelection: DriveDetailSelection | undefined;
   onDetailSelect: (selection: DriveDetailSelection | undefined) => void;
@@ -592,7 +595,7 @@ function Drive({
     ? used / total * 100 : null;
   const usageText = usage === null ? "" : t("{percent} used · {used} of {total}", {
     percent: new Intl.NumberFormat(language, { style: "percent", maximumFractionDigits: 1 }).format(usage / 100),
-    used: bytes(used), total: bytes(total),
+    used: formatBytes(used, sizeUnits), total: formatBytes(total, sizeUnits),
   });
   const [diagnostics, setDiagnostics] = useState(false);
   const [appearance, setAppearance] = useState(false);
@@ -637,7 +640,7 @@ function Drive({
         <div className="drive-metadata">{!(appearancePreferences.hiddenCardDetails & 1) && <span className={`type-tag type-${["smb", "sftp", "ftp"].includes(p.id) ? "network" : ["webdav", "nextcloud", "owncloud"].includes(p.id) ? "webdav" : ["s3", "b2", "azureblob", "gcs"].includes(p.id) ? "object" : "cloud"}`}>{t(p.name)}</span>}{!(appearancePreferences.hiddenCardDetails & 2) && <span className="server-path" title={c.serverPath || c.path || t("Root")}>{c.serverPath || c.path || t("Root")}</span>}</div>
         {usage !== null && !(appearancePreferences.hiddenCardDetails & 8) && <div className="drive-capacity">
           {!!(appearancePreferences.capacityParts & 1) && <progress max={100} value={usage} aria-label={t("Space used on {name}", { name: c.name })} aria-valuetext={usageText} />}
-          <p>{appearancePreferences.capacityParts === 7 ? usageText : [appearancePreferences.capacityParts & 2 ? new Intl.NumberFormat(language, { style: "percent", maximumFractionDigits: 1 }).format(usage! / 100) : "", appearancePreferences.capacityParts & 4 ? `${bytes(used)} / ${bytes(total)}` : ""].filter(Boolean).join(" · ")}</p>
+          <p>{appearancePreferences.capacityParts === 7 ? usageText : [appearancePreferences.capacityParts & 2 ? new Intl.NumberFormat(language, { style: "percent", maximumFractionDigits: 1 }).format(usage! / 100) : "", appearancePreferences.capacityParts & 4 ? `${formatBytes(used, sizeUnits)} / ${formatBytes(total, sizeUnits)}` : ""].filter(Boolean).join(" · ")}</p>
         </div>}
         {p.experimental && <p className="drive-secondary">{t("Experimental")}</p>}
         {c.mountFolder && !(appearancePreferences.hiddenCardDetails & 4) && <p className="mount-folder"><strong>{t("Mounted at:")}</strong>{" "}<span title={c.mountFolder}>{c.mountFolder}</span></p>}
@@ -648,7 +651,7 @@ function Drive({
       </div>
       <div className="drive-controls">
         <div className="drive-tools">
-          <DriveDetails connection={c} provider={p} selection={detailSelection} onSelect={onDetailSelect} />
+          <DriveDetails connection={c} provider={p} sizeUnits={sizeUnits} selection={detailSelection} onSelect={onDetailSelect} />
         </div>
       <div className="actions">
         {c.mounted && <button disabled={busy} title={t("Open in Explorer")} onClick={() => onAction(api.open)}>{t("Open")}</button>}

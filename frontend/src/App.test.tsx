@@ -2855,6 +2855,29 @@ test("spacing previews across the interface and cancel restores the saved densit
   await waitFor(() => expect(api.settings).toHaveBeenCalledWith(expect.objectContaining({ density: "comfortable" })));
 });
 
+test("saved size units update displayed sizes without editing the connection", async () => {
+  let saved: import("./api").Settings = snapshot.settings;
+  vi.mocked(api.snapshot).mockImplementation(async () => ({ ...snapshot, settings: saved,
+    freeBytes: 10 ** 9, connections: [{ ...connection, virtualCapacityGiB: 256 }] }));
+  vi.mocked(api.settings).mockImplementation(async settings => { saved = settings; });
+  render(<App />);
+  await openPreferences("Customize");
+  expect(screen.getByLabelText("Size units")).toHaveProperty("value", "binary");
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "Help for Size units" }));
+  expect(screen.getByRole("tooltip").textContent).toContain("1 GB = 1,000³ = 1,000,000,000 bytes");
+  fireEvent.change(screen.getByLabelText("Size units"), { target: { value: "decimal" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(api.settings).not.toHaveBeenCalled();
+  await openPreferences("Customize");
+  expect(screen.getByLabelText("Size units")).toHaveProperty("value", "binary");
+  fireEvent.change(screen.getByLabelText("Size units"), { target: { value: "decimal" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText(/Free on cache disk: 1\.0 GB/);
+  await selectDriveDetail("Details");
+  expect(screen.getByRole("tooltip").textContent).toContain("274.88 GB");
+  expect(api.update).not.toHaveBeenCalled();
+});
+
 
 test("customization and configuration expose separate categories and cache stays in the footer", async () => {
   render(<App />);

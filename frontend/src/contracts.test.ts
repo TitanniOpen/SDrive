@@ -42,7 +42,7 @@ test("Go wire samples satisfy the TypeScript bridge, including nested keys and n
   expectTypeOf<keyof Field>().toEqualTypeOf<keyof typeof filled.providers[0]["fields"][0]>();
   expectTypeOf<keyof Session>().toEqualTypeOf<keyof typeof samples.sessionFilled>();
   expectTypeOf<keyof Question>().toEqualTypeOf<keyof typeof question>();
-  expectTypeOf<Exclude<keyof Settings, "appearance">>().toEqualTypeOf<keyof typeof filled.settings>();
+  expectTypeOf<Exclude<keyof Settings, "appearance" | "sizeUnits">>().toEqualTypeOf<keyof typeof filled.settings>();
   expectTypeOf<keyof ConfigInput>().toEqualTypeOf<keyof typeof samples.configInput>();
   expectTypeOf<keyof AboutInfo>().toEqualTypeOf<keyof typeof samples.about>();
   expectTypeOf<keyof FieldError>().toEqualTypeOf<keyof typeof samples.dynamicFieldError>();

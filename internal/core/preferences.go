@@ -36,6 +36,10 @@ func validDensity(value string) bool {
 	return value == "compact" || value == "balanced" || value == "comfortable"
 }
 
+func validSizeUnits(value string) bool {
+	return value == "" || value == "binary" || value == "decimal"
+}
+
 func validTheme(theme string) bool {
 	switch theme {
 	case "system", "light", "dark", "retro", "outline", "terminal", "editorial", "atelier":
@@ -61,6 +65,9 @@ func (s *Service) SaveSettings(settings Settings) error {
 	}
 	if !validDensity(settings.Density) {
 		return fmt.Errorf("unsupported spacing")
+	}
+	if !validSizeUnits(settings.SizeUnits) {
+		return fmt.Errorf("Unsupported size units.")
 	}
 	if settings.Theme == "" {
 		settings.Theme = "system"
