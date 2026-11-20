@@ -1,4 +1,11 @@
 {
+  "Directory metadata lifetime": "Validade dos metadados de diretórios",
+  "seconds": "segundos",
+  "Permissions": "Permissões",
+  "Automatic mounting": "Montagem automática",
+  "Upload limit": "Limite de envio",
+  "Download limit": "Limite de download",
+  "Unlimited": "Sem limite",
   "Export/Import": "Exportar/Importar",
   "Drive name (optional)": "Nome da unidade (opcional)",
   "Retro 95": "Retrô 95",

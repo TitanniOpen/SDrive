@@ -1,4 +1,11 @@
 {
+  "Directory metadata lifetime": "目录元数据有效期",
+  "seconds": "秒",
+  "Permissions": "权限",
+  "Automatic mounting": "自动挂载",
+  "Upload limit": "上传限制",
+  "Download limit": "下载限制",
+  "Unlimited": "无限制",
   "Export/Import": "导出/导入",
   "Drive name (optional)": "驱动器名称（可选）",
   "Retro 95": "复古 95",

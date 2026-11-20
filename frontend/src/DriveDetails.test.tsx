@@ -23,6 +23,16 @@ function DetailsHost({ connection }: { connection: ConnectionView }) {
 }
 afterEach(cleanup);
 
+test("details and options present labeled values without repeating the path", () => {
+  render(<DetailsHost connection={{ ...connected, serverPath: "unique-server-path", directoryCacheSeconds: 300, autoMount: true }} />);
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "Details" }));
+  expect(screen.getByRole("tooltip").textContent).not.toContain("unique-server-path");
+  expect(screen.getByRole("tooltip").textContent).toContain("300 seconds");
+  fireEvent.mouseEnter(screen.getByRole("button", { name: "Connection options" }));
+  expect(screen.getByRole("tooltip").textContent).toContain("Permissions: Read and write");
+  expect(screen.getByRole("tooltip").textContent).toContain("Automatic mounting: Enabled");
+});
+
 test.each(["Local cache", "Network", "Remote capacity"])("%s keeps its explanation after readings and warnings", topic => {
   render(<DetailsHost connection={{ ...connected,
     cache: { ...connected.cache, error: "Cache inspection failed" },

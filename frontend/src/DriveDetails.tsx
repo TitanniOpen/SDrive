@@ -55,13 +55,12 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
   const alertError = !!(c.error || c.cache.error || uploadErrors || needsRecovery || c.mounted && security === "unencrypted");
   const items: { key: keyof typeof icons; title: string; visible?: boolean; tone?: "info" | "success" | "warning" | "danger" | "inactive"; content: ReactNode }[] = [
     { key: "destination", title: "Details", content: <>
-      <p>{c.serverPath || c.path || t("Root")}</p>
       <dl className="connection-details">
         <div><dt>{t("Authentication")}</dt><dd>{t(c.authMethod === "serviceAccount" ? "Service account" : p.oauth ? "OAuth" : "Basic")}</dd></div>
         <div><dt>{t("Hidden files")}</dt><dd>{t(c.hiddenFileVisibility === "hide" ? "Always hide" : c.hiddenFileVisibility === "show" ? "Always show" : "Follow file manager settings")}</dd></div>
         <div><dt>{t("Open Explorer after connecting")}</dt><dd>{t(c.openExplorerAfterConnect ? "Enabled" : "Disabled")}</dd></div>
         <div><dt>{t("Use local file cache")}</dt><dd>{t(c.disableFileCache ? "Disabled" : "Enabled")}</dd></div>
-        <div><dt>{t("Directory metadata lifetime (seconds)")}</dt><dd>{c.directoryCacheSeconds || 300}</dd></div>
+        <div><dt>{t("Directory metadata lifetime")}</dt><dd>{c.directoryCacheSeconds || 300} {t("seconds")}</dd></div>
         <div><dt>{t("Virtual capacity in Explorer (GiB)")}</dt><dd>{c.virtualCapacityGiB || 0}</dd></div>
         {["webdav", "nextcloud", "owncloud"].includes(c.provider) && <div><dt>{t("Connection timeout (seconds)")}</dt><dd>{c.connectTimeout || 0}</dd></div>}
         {["webdav", "nextcloud", "owncloud"].includes(c.provider) && <div><dt>{t("HTTP idle timeout (seconds)")}</dt><dd>{c.idleTimeout || 0}</dd></div>}
@@ -72,16 +71,16 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
       {!details && !detailsError && <LoadingStatus>{t("Loading connection details…")}</LoadingStatus>}
       {detailsError && <p role="status">{t("Could not load additional connection details.")}</p>}
     </> },
-    { key: "options", title: "Connection options", content: <ul aria-label={t("Connection options")}>
+    { key: "options", title: "Connection options", content: <ul className="connection-options" aria-label={t("Connection options")}>
+      <li>{t("Permissions")}: <span>{t(c.readOnly ? "Read only" : "Read and write")}</span></li>
+      <li>{t("Automatic mounting")}: <span>{t(c.autoMount ? "Enabled" : "Disabled")}</span></li>
       {[
-        c.readOnly ? t("Read only") : t("Read and write"),
-        t(c.autoMount ? "Automatic mounting enabled" : "Automatic mounting disabled"),
         t(c.sessionOnly ? "Sign in on every connection" : "Saved credentials"),
         t(c.mountFolder ? "Local folder" : c.mountMode === "local" ? "Local disk" : "Network drive"),
         t(c.useProxy ? "Proxy requested" : "Direct connection"),
-        c.uploadLimit ? t("Upload limit: {size}/s", { size: bytes(c.uploadLimit) }) : t("Upload limit: unlimited"),
-        c.downloadLimit ? t("Download limit: {size}/s", { size: bytes(c.downloadLimit) }) : t("Download limit: unlimited"),
-      ].map((label) => <li key={label}>{label}</li>)}
+      ].map((label) => <li key={label}><span>{label}</span></li>)}
+      <li>{t("Upload limit")}: <span>{c.uploadLimit ? `${bytes(c.uploadLimit)}/s` : t("Unlimited")}</span></li>
+      <li>{t("Download limit")}: <span>{c.downloadLimit ? `${bytes(c.downloadLimit)}/s` : t("Unlimited")}</span></li>
     </ul> },
     { key: "uploads", title: "Upload details", visible: transfersVisible, tone: uploadErrors ? "danger" : c.pending === null ? "warning" : c.uploads?.active ? "info" : "warning", content: <>
       <p>{c.pending === null ? t("Pending uploads unknown") : t("{count} pending upload(s)", { count: c.pending })}</p>
@@ -91,8 +90,8 @@ export function DriveDetails({ connection: c, provider: p, selection, onSelect }
       {c.mounted && c.pending !== null && c.pending > 0 && <p>{t("Close open files and wait for uploads before disconnecting.")}</p>}
     </> },
     { key: "cache", title: "Local cache", visible: cacheVisible, tone: c.cache.error ? "danger" : cacheUnknown ? "warning" : "info", content: <>
-      {c.disableFileCache && <p>{t("Local file cache is disabled.")}</p>}
-      {!c.disableFileCache && <p>{t("Approximate cache used: {used} · Pending file sizes: {pending}", { used: bytes(c.cache.usedBytes), pending: bytes(c.cache.pendingBytes) })}</p>}
+      {c.disableFileCache && <p className="cache-summary">{t("Local file cache is disabled.")}</p>}
+      {!c.disableFileCache && <p className="cache-summary">{t("Approximate cache used: {used} · Pending file sizes: {pending}", { used: bytes(c.cache.usedBytes), pending: bytes(c.cache.pendingBytes) })}</p>}
       <p>{c.cache.checkedAt ? t("Local inspection: {time} (updated every 30 s)", { time: new Date(c.cache.checkedAt).toLocaleTimeString() }) : t("Local cache inspection unavailable")}</p>
       {c.cache.recoveryPath && <p>{t("Local recovery is pending. Preserved files:")} {c.cache.recoveryPath}</p>}
       {c.cache.error && <p>{t(c.cache.error)}</p>}

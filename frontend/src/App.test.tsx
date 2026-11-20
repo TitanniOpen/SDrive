@@ -428,7 +428,7 @@ test("connection option indicators preserve recovery and upload messages", async
   vi.mocked(api.snapshot).mockResolvedValue({ ...snapshot, connections: [{ ...connection, autoMount: true, readOnly: true, recovery: true, pending: 2, uploadLimit: 1024 }] });
   render(<App />);
   await selectDriveDetail("Connection options");
-  await screen.findByText("Automatic mounting enabled");
+  expect(screen.getByRole("list", { name: "Connection options" }).textContent).toContain("Automatic mounting: Enabled");
   expect(screen.getByRole("list", { name: "Connection options" }).textContent).toContain("Upload limit: 1.0 KiB/s");
   expect(screen.getAllByText(/Recovery required/).length).toBeGreaterThan(0);
   await selectDriveDetail("Alerts and recovery");
@@ -976,7 +976,7 @@ test.each(["en", "pt-BR"])("drive labels and experimental text follow %s without
   expect(document.querySelector(".server-path")?.textContent).toBe("My drives");
   expect(screen.getByText("Experimental", { exact: true })).toBeDefined();
   await selectDriveDetail(language === "en" ? "Details" : "Detalhes");
-  expect(screen.getByRole("tooltip").textContent).toContain("My drives");
+  expect(screen.getByRole("tooltip").textContent).not.toContain("My drives");
   fireEvent.keyDown(document, { key: "Escape" });
   fireEvent.click(screen.getByRole("button", { name: language === "en" ? "+ New connection" : "+ Nova conexão" }));
   selectAvailableCategory();
@@ -2345,7 +2345,7 @@ test("drive detail icons expose all eight topics without opening a dialog", asyn
   await screen.findByRole("heading", { name: connection.name });
   expect(screen.queryByRole("dialog")).toBeNull();
   for (const [label, detail] of [
-    ["Details", "Team files"], ["Connection options", "Automatic mounting disabled"],
+    ["Details", "Directory metadata lifetime"], ["Connection options", "Automatic mounting: Disabled"],
     ["Upload details", "Upload activity is currently unknown."], ["Local cache", "Approximate cache used: 0 B · Pending file sizes: 0 B"],
     ["Network", "Network measurement is unavailable for this connection."],
     ["Remote capacity", "Remote capacity is currently unknown."], ["Connection security", "Traffic encrypted · HTTPS"],
@@ -2396,8 +2396,8 @@ test("removing a connection requires the explicit confirmation and cancellation 
 
 test("one drive detail tooltip follows refreshed snapshots without switching connections", async () => {
   let current: Snapshot = { ...snapshot, connections: [
-    { ...connection, name: "First drive", path: "First library" },
-    { ...connection, id: "second", name: "Second drive", path: "Second library" },
+    { ...connection, name: "First drive", directoryCacheSeconds: 111 },
+    { ...connection, id: "second", name: "Second drive", directoryCacheSeconds: 222 },
   ] };
   vi.mocked(api.snapshot).mockImplementation(async () => current);
   vi.useFakeTimers();
@@ -2405,15 +2405,15 @@ test("one drive detail tooltip follows refreshed snapshots without switching con
     render(<App />);
     await act(async () => {});
     await selectDriveDetail("Details", 0);
-    expect(screen.getByRole("tooltip").textContent).toContain("First library");
+    expect(screen.getByRole("tooltip").textContent).toContain("111 seconds");
     fireEvent.keyDown(document, { key: "Escape" });
     await selectDriveDetail("Details", 1);
     expect(screen.getAllByRole("tooltip")).toHaveLength(1);
-    expect(screen.getByRole("tooltip").textContent).toContain("Second library");
-    current = { ...current, connections: current.connections.map((c) => c.id === "second" ? { ...c, path: "Updated library" } : c) };
+    expect(screen.getByRole("tooltip").textContent).toContain("222 seconds");
+    current = { ...current, connections: current.connections.map((c) => c.id === "second" ? { ...c, directoryCacheSeconds: 333 } : c) };
     await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
-    expect(screen.getByRole("tooltip").textContent).toContain("Updated library");
-    expect(screen.getByRole("tooltip").textContent).not.toContain("First library");
+    expect(screen.getByRole("tooltip").textContent).toContain("333 seconds");
+    expect(screen.getByRole("tooltip").textContent).not.toContain("111 seconds");
   } finally { vi.useRealTimers(); }
 });
 
