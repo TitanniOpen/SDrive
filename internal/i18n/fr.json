@@ -614,6 +614,7 @@
   "Directory metadata lifetime (seconds)": "Durée de vie des métadonnées de l'annuaire (en secondes)",
   "Directory metadata refreshed. Reopen the folder in Explorer to see remote changes.": "Métadonnées du répertoire actualisées. Rouvrez le dossier dans l'Explorateur pour voir les modifications à distance.",
   "Directory selection is unavailable.": "La sélection du répertoire n'est pas disponible.",
+  "Disconnect all": "Tout déconnecter",
   "Disconnect all drives and finish setup or recovery before changing the cache.": "Déconnectez tous les lecteurs et terminez la configuration ou la récupération avant de modifier le cache.",
   "Disconnect all drives and resolve pending files before changing the cache.": "Déconnectez tous les lecteurs et résolvez les fichiers en attente avant de modifier le cache.",
   "Disconnect all drives and resolve pending uploads first. The new directory must be empty and outside this profile. The old cache is preserved; files are not migrated or deleted.": "Déconnectez tous les lecteurs et résolvez d'abord les téléversements en attente. Le nouveau répertoire doit être vide et en dehors de ce profil. L'ancienne cache est conservée ; les fichiers ne sont ni migrés ni supprimés.",

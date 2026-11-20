@@ -224,6 +224,11 @@ func (d *desktop) captureGeometry() {
 }
 
 func (d *desktop) action(key string, action func() error) {
+	if key != "disconnect-all" {
+		if _, bulk := d.actions.Load("disconnect-all"); bulk {
+			return
+		}
+	}
 	if _, loaded := d.actions.LoadOrStore(key, true); loaded {
 		return
 	}
@@ -263,6 +268,9 @@ func (d *desktop) trayMenu(view core.View, access core.AccessStatus) *applicatio
 	menu.Add(fmt.Sprintf("%s: %d · %s", t("Connected drives"), status.Connected, t(status.State))).SetEnabled(false)
 	menu.AddSeparator()
 	_, exiting := d.actions.Load("exit")
+	_, disconnectingAll := d.actions.Load("disconnect-all")
+	allAvailable := !exiting && !disconnectingAll && view.SettingsError == "" && view.EngineError == ""
+	var mountedIDs []string
 	if !access.Locked && access.Enabled {
 		menu.Add(t("Lock SDrive")).OnClick(func(*application.Context) { d.action("lock", d.service.Lock) })
 	}
@@ -271,12 +279,23 @@ func (d *desktop) trayMenu(view core.View, access core.AccessStatus) *applicatio
 			break
 		}
 		_, working := d.actions.Load(c.ID)
-		busy := c.Busy || working || exiting
+		busy := c.Busy || working || exiting || disconnectingAll
+		if c.Mounted {
+			mountedIDs = append(mountedIDs, c.ID)
+			allAvailable = allAvailable && !busy
+		}
 		target := c.Letter + ":"
 		if c.MountFolder != "" {
 			target = c.MountFolder
 		}
-		submenu := menu.AddSubmenu(strings.ReplaceAll(c.Name+" ("+target+")", "&", "&&"))
+		item := application.NewSubMenuItem(strings.ReplaceAll(c.Name+" ("+target+")", "&", "&&"))
+		fill := color.RGBA{128, 140, 145, 255}
+		if c.Mounted {
+			fill = color.RGBA{33, 185, 147, 255}
+		}
+		item.SetBitmap(trayIconColor(fill))
+		menu.Append(application.NewMenuFromItems(item))
+		submenu := item.GetSubmenu()
 		openLabel := "Open in Explorer"
 		if platform.OS == "linux" {
 			openLabel = "Open in file manager"
@@ -292,6 +311,23 @@ func (d *desktop) trayMenu(view core.View, access core.AccessStatus) *applicatio
 					return d.service.Unmount(c.ID)
 				}
 				return d.service.Mount(c.ID)
+			})
+		})
+	}
+	if !access.Locked && len(mountedIDs) > 1 {
+		menu.Add(t("Disconnect all")).SetEnabled(allAvailable).OnClick(func(*application.Context) {
+			for _, id := range mountedIDs {
+				if _, busy := d.actions.Load(id); busy {
+					return
+				}
+			}
+			d.action("disconnect-all", func() error {
+				for _, id := range mountedIDs {
+					if err := d.service.Unmount(id); err != nil {
+						return err
+					}
+				}
+				return nil
 			})
 		})
 	}

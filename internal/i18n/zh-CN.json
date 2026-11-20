@@ -614,6 +614,7 @@
   "Directory metadata lifetime (seconds)": "目录元数据生命周期（秒）",
   "Directory metadata refreshed. Reopen the folder in Explorer to see remote changes.": "目录元数据已刷新。在资源管理器中重新打开该文件夹以查看远程更改。",
   "Directory selection is unavailable.": "目录选择不可用。",
+  "Disconnect all": "断开全部连接",
   "Disconnect all drives and finish setup or recovery before changing the cache.": "在更改缓存之前，请断开所有驱动器并完成设置或恢复。",
   "Disconnect all drives and resolve pending files before changing the cache.": "在更改缓存之前，请断开所有驱动器并解决挂起的文件。",
   "Disconnect all drives and resolve pending uploads first. The new directory must be empty and outside this profile. The old cache is preserved; files are not migrated or deleted.": "断开所有驱动器的连接并首先解决挂起的上传问题。新目录必须为空且位于此配置文件之外。旧的缓存被保留；文件不会迁移或删除。",

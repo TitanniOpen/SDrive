@@ -273,3 +273,27 @@ func TestLockedTrayHidesDriveActionsEvenWithAnOlderSnapshot(t *testing.T) {
 		t.Fatal("locked tray lost unlock entry or safe exit")
 	}
 }
+
+func TestTrayDisconnectAllRequiresMultipleMountedDrives(t *testing.T) {
+	d := &desktop{service: &core.Service{}}
+	view := core.View{Settings: core.Settings{Language: "en"}, Connections: []core.ConnectionView{
+		{Connection: core.Connection{ID: "one", Name: "One", Letter: "S"}, Mounted: true},
+		{Connection: core.Connection{ID: "two", Name: "Two", Letter: "T"}},
+	}}
+	menu := d.trayMenu(view, core.AccessStatus{})
+	if menu.FindByLabel("Disconnect all") != nil {
+		t.Fatal("single mounted drive offered bulk disconnect")
+	}
+	menu.Destroy()
+	view.Connections[1].Mounted = true
+	menu = d.trayMenu(view, core.AccessStatus{})
+	if menu.FindByLabel("Disconnect all") == nil {
+		t.Fatal("multiple mounted drives missing bulk disconnect")
+	}
+	menu.Destroy()
+	menu = d.trayMenu(view, core.AccessStatus{Locked: true})
+	defer menu.Destroy()
+	if menu.FindByLabel("Disconnect all") != nil {
+		t.Fatal("locked tray exposed bulk disconnect")
+	}
+}
