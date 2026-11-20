@@ -8,7 +8,7 @@ import (
 )
 
 func trayIcon() []byte {
-	return trayIconColor(color.RGBA{33, 185, 147, 255})
+	return trayIconColor(color.RGBA{128, 140, 145, 255})
 }
 
 func trayIconColor(fill color.RGBA) []byte {
