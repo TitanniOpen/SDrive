@@ -63,20 +63,23 @@ function Unlock({ status, onUnlocked }: { status: AccessStatus; onUnlocked: () =
   const [code, setCode] = useState("");
   const [replacement, setReplacement] = useState("");
   const [recovering, setRecovering] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [operation, setOperation] = useState<"unlock" | "exit">();
+  const busy = !!operation;
   const [error, setError] = useState("");
   return <main className="access-screen"><h1>{t("SDrive is locked")}</h1><p>{t(lockLimit)}</p>
-    {busy && <LoadingStatus>{t("Operation in progress…")}</LoadingStatus>}
+    {busy && <LoadingStatus>{t(operation === "exit" ? "Exiting safely…" : "Operation in progress…")}</LoadingStatus>}
     {status.error && <p role="alert">{t(status.error)}</p>}
     {error && <p role="alert">{error}</p>}
     {replacement ? <RecoveryCode code={replacement} onDone={() => { setReplacement(""); setRecovering(false); setPIN(""); setCode(""); }} /> :
       <form onSubmit={async (event) => {
-        event.preventDefault(); setBusy(true); setError("");
+        event.preventDefault();
+        if (busy) return;
+        setOperation("unlock"); setError("");
         try {
           if (recovering) { setReplacement(await api.recoverAccess(code, pin)); setCode(""); setPIN(""); }
           else { await api.unlockAccess(pin); setPIN(""); await onUnlocked(); }
         } catch (e) { setError(t(errorMessage(e))); setPIN(""); }
-        finally { setBusy(false); }
+        finally { setOperation(undefined); }
       }}>
         <fieldset disabled={busy || !!status.error}>
           {recovering && <SecretInput label={t("Recovery code")} value={code} required onChange={setCode} />}
@@ -87,7 +90,13 @@ function Unlock({ status, onUnlocked }: { status: AccessStatus; onUnlocked: () =
         </fieldset>
       </form>}
     <p>{t("If the PIN and recovery code are lost, follow the application lock recovery instructions. Do not delete connection data or cache.")}</p>
-    <button disabled={busy} onClick={async () => { setBusy(true); try { await api.exit(); } catch (e) { setError(t(errorMessage(e))); } finally { setBusy(false); } }}>{t("Exit safely")}</button>
+    <button disabled={busy} onClick={async () => {
+      setOperation("exit");
+      setError("");
+      try { await api.exit(); }
+      catch (e) { setError(t(errorMessage(e))); }
+      finally { setOperation(undefined); }
+    }}>{t("Exit safely")}</button>
   </main>;
 }
 

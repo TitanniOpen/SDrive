@@ -901,14 +901,25 @@ test("recovery prevents deleting or changing destination", async () => {
     (screen.getByText("Remove connection") as HTMLButtonElement).disabled,
   ).toBe(true);
 });
-test("safe-exit errors remain visible", async () => {
-  vi.mocked(api.exit).mockRejectedValue(new Error("Uploads pendentes"));
+test.each([false, true])("safe exit shows progress and permits retry (locked=%s)", async (locked) => {
+  vi.mocked(api.accessStatus).mockResolvedValue({ ...access, locked });
+  let fail!: (reason: Error) => void;
+  vi.mocked(api.exit).mockReturnValue(new Promise<void>((_, reject) => { fail = reject; }));
   render(<App />);
-  fireEvent.click(await screen.findByText("Exit safely"));
+  const button = await screen.findByRole("button", { name: "Exit safely" });
+  fireEvent.click(button);
+  const progress = await screen.findByText("Exiting safely…");
+  expect(progress.closest('[role="status"]')?.querySelector(".spinner")).not.toBeNull();
+  expect(button.matches(":disabled")).toBe(true);
+  fireEvent.click(button);
+  expect(api.exit).toHaveBeenCalledTimes(1);
+  await act(async () => fail(new Error("Uploads pendentes")));
   expect(await screen.findByRole("alert")).toHaveProperty(
     "textContent",
     expect.stringContaining("Uploads pendentes"),
   );
+  expect(screen.queryByText("Exiting safely…")).toBeNull();
+  expect(button.matches(":disabled")).toBe(false);
 });
 test("provider question accepts MFA and does not persist it in browser storage", async () => {
   vi.mocked(api.begin).mockResolvedValue("mfa");
@@ -1714,7 +1725,7 @@ test("setup submits preferred document formats and virtual capacity", async () =
   fireEvent.click(screen.getByText("Advanced options"));
   expect((screen.getByLabelText("Google document download format") as HTMLSelectElement).value).toBe("docx,xlsx,pptx,svg");
   fireEvent.change(screen.getByLabelText("Google document download format"), { target: { value: "pdf,docx,xlsx,pptx,svg" } });
-  fireEvent.change(screen.getByLabelText("Virtual capacity in Explorer (GiB)"), { target: { value: "256" } });
+  fireEvent.change(screen.getByLabelText("Virtual capacity in Explorer"), { target: { value: "256" } });
   fireEvent.click(screen.getByRole("button", { name: "Sign in with Google Drive" }));
   await waitFor(() => expect(api.begin).toHaveBeenCalledWith(expect.objectContaining({ connection: expect.objectContaining({ virtualCapacityGiB: 256 }), values: expect.objectContaining({ export_formats: "pdf,docx,xlsx,pptx,svg" }) })));
 });

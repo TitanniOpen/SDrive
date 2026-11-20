@@ -111,7 +111,7 @@ const linuxLabels: Record<string, string> = {
   "18 connection types · Credentials protected by Windows": "18 connection types · Credentials protected by your desktop keyring",
   "Credentials are encrypted. The cache contains local files accessible to your Windows user.": "Credentials are encrypted. The cache contains local files accessible to your user.",
   "The lock protects SDrive management controls. Drives that remain connected are still accessible in Explorer.": "The lock protects SDrive management controls. Mounted folders remain accessible to your applications.",
-  "Virtual capacity in Explorer (GiB)": "Virtual capacity in file manager (GiB)",
+  "Virtual capacity in Explorer": "Virtual capacity in file manager",
   "Refresh files in Explorer": "Refresh files in file manager",
   "Directory metadata refreshed. Reopen the folder in Explorer to see remote changes.": "Directory metadata refreshed. Reopen the folder in your file manager to see remote changes.",
   "Folder mounts require local-disk mode. SDrive runs in your Windows session; elevated applications may see different drives. Local-disk access is restricted to your user.": "Mounted folders are restricted to your user. FUSE must be available in your desktop session.",

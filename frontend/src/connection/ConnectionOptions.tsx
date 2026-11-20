@@ -16,7 +16,16 @@ export function DirectoryCacheOptions({ wizard }: { wizard: Wizard }) {
       {fieldFeedback("hiddenFileVisibility")}
     </div>
     <div className="field-with-help">
-      <div className="field-control"><div className="field-heading"><label htmlFor={`${fieldID}-options-virtual-capacity`}>{t("Virtual capacity in Explorer (GiB)")}</label><FieldHelp label={t("Virtual capacity in Explorer (GiB)")}>{t("Zero uses the provider default. This changes the displayed total after reconnecting; it does not reserve space, enforce a quota or change provider quota or local cache free space.")}</FieldHelp></div><input id={`${fieldID}-options-virtual-capacity`} type="number" min="0" max="8388607" step="1" disabled={initial.recovery} {...validationProps("virtualCapacityGiB")} value={c.virtualCapacityGiB || 0} onChange={(e) => change({ virtualCapacityGiB: Number(e.target.value) })} /></div>
+      <div className="field-control">
+        <div className="field-heading">
+          <label htmlFor={`${fieldID}-options-virtual-capacity`}>{t("Virtual capacity in Explorer")}</label>
+          <FieldHelp label={t("Virtual capacity in Explorer")}>{t("Zero uses the provider default. This changes the displayed total after reconnecting; it does not reserve space, enforce a quota or change provider quota or local cache free space.")}</FieldHelp>
+        </div>
+        <div className="field-with-unit">
+          <input id={`${fieldID}-options-virtual-capacity`} type="number" min="0" max="8388607" step="1" disabled={initial.recovery} {...validationProps("virtualCapacityGiB", `${fieldID}-virtual-capacity-unit`)} value={c.virtualCapacityGiB || 0} onChange={(e) => change({ virtualCapacityGiB: Number(e.target.value) })} />
+          <span id={`${fieldID}-virtual-capacity-unit`}>GiB</span>
+        </div>
+      </div>
       {fieldFeedback("virtualCapacityGiB")}
 
     </div>

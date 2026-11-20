@@ -254,6 +254,22 @@ func TestTrayRepeatedOpenPreservesActiveMenu(t *testing.T) {
 	}
 }
 
+func TestTrayShowsSafeExitProgress(t *testing.T) {
+	d := &desktop{service: &core.Service{}}
+	d.actions.Store("exit", true)
+	busy := d.trayMenu(core.View{}, core.AccessStatus{})
+	defer busy.Destroy()
+	if busy.FindByLabel(exitingSafely) == nil || busy.FindByLabel("Exit safely") != nil {
+		t.Fatal("tray did not replace safe exit with progress")
+	}
+	d.actions.Delete("exit")
+	idle := d.trayMenu(core.View{}, core.AccessStatus{})
+	defer idle.Destroy()
+	if idle.FindByLabel("Exit safely") == nil || idle.FindByLabel(exitingSafely) != nil {
+		t.Fatal("tray did not restore safe exit")
+	}
+}
+
 func TestLockedTrayHidesDriveActionsEvenWithAnOlderSnapshot(t *testing.T) {
 	d := &desktop{service: &core.Service{}}
 	view := core.View{Settings: core.Settings{Language: "en"}, Connections: []core.ConnectionView{{Connection: core.Connection{ID: "synthetic", Name: "Private drive", Letter: "S"}, Mounted: true}}}

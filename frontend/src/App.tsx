@@ -226,9 +226,9 @@ function AppContent({ onLocked }: { onLocked: () => void }) {
           <button
             className="nav" title={t(data?.settingsError ? "Close SDrive" : "Exit safely")} data-tooltip={t(data?.settingsError ? "Close SDrive" : "Exit safely")}
             disabled={!!working["exit"]}
-            onClick={() => void run("exit", api.exit)}
+            onClick={() => void run("exit", api.exit, "", "Exiting safely…")}
           >
-            <span className="nav-icon" aria-hidden="true">⏻</span><span className="nav-label">{t(data?.settingsError ? "Close SDrive" : "Exit safely")}</span>
+            <span className="nav-icon" aria-hidden="true">{working["exit"] ? <Spinner /> : "⏻"}</span><span className="nav-label">{t(data?.settingsError ? "Close SDrive" : "Exit safely")}</span>
           </button>
         </footer>
       </aside>

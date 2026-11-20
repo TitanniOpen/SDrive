@@ -145,6 +145,7 @@ type desktop struct {
 	geometryWarning bool
 	geometryReady   bool
 	iconState       string
+	exitSpinner     *time.Timer
 	actions         sync.Map
 }
 
@@ -152,12 +153,16 @@ func (d *desktop) accept(sequence uint64, view core.View) {
 	d.mu.Lock()
 	if sequence > d.sequence {
 		d.sequence, d.view = sequence, view
-		select {
-		case d.wake <- struct{}{}:
-		default:
-		}
+		d.refreshTray()
 	}
 	d.mu.Unlock()
+}
+
+func (d *desktop) refreshTray() {
+	select {
+	case d.wake <- struct{}{}:
+	default:
+	}
 }
 
 func (d *desktop) latest() core.View { d.mu.Lock(); defer d.mu.Unlock(); return d.view }
@@ -232,9 +237,21 @@ func (d *desktop) action(key string, action func() error) {
 	if _, loaded := d.actions.LoadOrStore(key, true); loaded {
 		return
 	}
+	if key == "exit" {
+		d.refreshTray()
+	}
 	go func() {
-		defer d.actions.Delete(key)
-		if err := action(); err != nil {
+		if key != "exit" {
+			defer d.actions.Delete(key)
+		}
+		err := action()
+		if key == "exit" {
+			d.actions.Delete(key)
+			if err != nil && !d.stopped.Load() {
+				application.InvokeSync(d.updateTray)
+			}
+		}
+		if err != nil {
 			application.InvokeAsync(d.show)
 			platform.Alert(i18n.Error(core.Language(d.service), err))
 		}
@@ -332,7 +349,11 @@ func (d *desktop) trayMenu(view core.View, access core.AccessStatus) *applicatio
 		})
 	}
 	menu.AddSeparator()
-	menu.Add(t("Exit safely")).SetEnabled(!exiting).OnClick(func(*application.Context) { d.action("exit", d.service.Exit) })
+	if exiting {
+		menu.Add(t(exitingSafely)).SetEnabled(false)
+	} else {
+		menu.Add(t("Exit safely")).OnClick(func(*application.Context) { d.action("exit", d.service.Exit) })
+	}
 	return menu
 }
 
@@ -352,12 +373,21 @@ func (d *desktop) updateTray() {
 		d.menu = d.trayMenu(view, d.service.AccessStatus())
 		d.tray.SetMenu(d.menu)
 	}
-	if d.iconState != status.State {
-		colors := map[string]color.RGBA{"Disconnected": {128, 140, 145, 255}, "Connected": {33, 185, 147, 255}, "Uploading or working": {65, 150, 230, 255}, "Recovery or unknown status": {235, 175, 40, 255}, "Attention required": {225, 75, 75, 255}}
-		d.tray.SetIcon(trayIconColor(colors[status.State]))
-		d.iconState = status.State
+	_, exiting := d.actions.Load("exit")
+	if exiting {
+		if d.exitSpinner == nil {
+			d.animateExitIcon(0)
+		}
+		d.tray.SetTooltip("SDrive · " + i18n.Text(view.Settings.Language, exitingSafely))
+	} else {
+		d.stopExitIcon()
+		if d.iconState != status.State {
+			colors := map[string]color.RGBA{"Disconnected": {128, 140, 145, 255}, "Connected": {33, 185, 147, 255}, "Uploading or working": {65, 150, 230, 255}, "Recovery or unknown status": {235, 175, 40, 255}, "Attention required": {225, 75, 75, 255}}
+			d.tray.SetIcon(trayIconColor(colors[status.State]))
+			d.iconState = status.State
+		}
+		d.tray.SetTooltip(fmt.Sprintf("SDrive · %s: %d · %s", i18n.Text(view.Settings.Language, "Connected drives"), status.Connected, i18n.Text(view.Settings.Language, status.State)))
 	}
-	d.tray.SetTooltip(fmt.Sprintf("SDrive · %s: %d · %s", i18n.Text(view.Settings.Language, "Connected drives"), status.Connected, i18n.Text(view.Settings.Language, status.State)))
 	alert := newTrayProblem(d.problems, status.Problems)
 	d.problems = status.Problems
 	if alert && !d.visible.Load() {
@@ -474,6 +504,7 @@ func setupDesktop(app *application.App, window *application.WebviewWindow, servi
 	})
 	app.OnShutdown(func() {
 		d.stopped.Store(true)
+		d.stopExitIcon()
 		if overlay.timer != nil {
 			overlay.timer.Stop()
 		}
